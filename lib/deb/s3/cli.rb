@@ -49,6 +49,11 @@ class Deb::S3::CLI < Thor
     :type     => :string,
     :desc     => "The secret key for connecting to S3."
 
+  option :sign,
+    :default  => false,
+    :type     => :boolean,
+    :desc     => "Should sign the Release file when uploading."
+
   desc "upload FILE",
     "Uploads the given FILE to a S3 bucket as an APT repository."
   def upload(file)
@@ -106,7 +111,7 @@ class Deb::S3::CLI < Thor
     log("Uploading package and new manifests to S3")
     manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
     release.update_manifest(manifest)
-    release.write_to_s3 { |f| sublog("Transferring #{f}") }
+    release.write_to_s3(options[:sign]) { |f| sublog("Transferring #{f}") }
 
     log("Update complete.")
   end

@@ -73,7 +73,7 @@ class Deb::S3::Release
     template("release.erb").result(binding)
   end
 
-  def write_to_s3
+  def write_to_s3(sign=false)
     # validate some other files are present
     if block_given?
       self.validate_others { |f| yield f }
@@ -87,6 +87,19 @@ class Deb::S3::Release
     release_tmp.close
     yield self.filename if block_given?
     s3_store(release_tmp.path, self.filename)
+
+    # sign the file, if necessary
+    if sign
+      if system("gpg -a -b #{release_tmp.path}")
+        s3_store(release_tmp.path+".asc", self.filename+".gpg")
+      else
+        raise "Signing the Release file failed."
+      end
+    else
+      # remove an existing Release.gpg, if it was there
+      s3_remove(self.filename+".gpg")
+    end
+
     release_tmp.unlink
   end
 

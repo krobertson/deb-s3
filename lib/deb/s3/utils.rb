@@ -48,4 +48,8 @@ module Deb::S3::Utils
         Deb::S3::Utils.bucket, :access => Deb::S3::Utils.access_policy)
     end
   end
+
+  def s3_remove(path)
+    AWS::S3::S3Object.delete(Deb::S3::Utils.bucket, path) if s3_exists(path)
+  end
 end
