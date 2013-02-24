@@ -91,7 +91,12 @@ class Deb::S3::Release
     # sign the file, if necessary
     if sign
       if system("gpg -a -b #{release_tmp.path}")
-        s3_store(release_tmp.path+".asc", self.filename+".gpg")
+        local_file = release_tmp.path+".asc"
+        remote_file = self.filename+".gpg"
+        yield remote_file if block_given?
+        raise "Unable to locate Release signature file" unless File.exists?(local_file)
+        s3_store(local_file, remote_file)
+        File.unlink(local_file)
       else
         raise "Signing the Release file failed."
       end
