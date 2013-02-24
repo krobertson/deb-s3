@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+$:.unshift File.expand_path('../../lib', __FILE__)
+
+require 'rubygems'
+require 'deb/s3/cli'
+
+Deb::S3::CLI.start
+

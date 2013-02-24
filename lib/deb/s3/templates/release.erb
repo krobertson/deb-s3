@@ -1,0 +1,16 @@
+Codename: example
+Date: <%= Time.now.utc.strftime("%a, %d %b %Y %T %Z") %>
+Architectures: amd64
+Components: main
+MD5Sum:
+<% files.each do |f,p| -%>
+ <%= p[:md5] %> <%= p[:size] %> <%= f %>
+<% end -%>
+SHA1:
+<% files.each do |f,p| -%>
+ <%= p[:sha1] %> <%= p[:size] %> <%= f %>
+<% end -%>
+SHA256:
+<% files.each do |f,p| -%>
+ <%= p[:sha256] %> <%= p[:size] %> <%= f %>
+<% end -%>
