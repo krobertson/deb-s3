@@ -1,7 +1,7 @@
-Codename: example
+Codename: <%= codename %>
 Date: <%= Time.now.utc.strftime("%a, %d %b %Y %T %Z") %>
-Architectures: amd64
-Components: main
+Architectures: <%= architectures.join(" ") %>
+Components: <%= components.join(" ") %>
 MD5Sum:
 <% files.each do |f,p| -%>
  <%= p[:md5] %> <%= p[:size].to_s.rjust(16) %> <%= f %>

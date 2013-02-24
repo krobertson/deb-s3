@@ -51,7 +51,7 @@ class Deb::S3::CLI < Thor
     error("File doesn't exist") unless File.exists?(file)
 
     # make sure we have a valid visibility setting
-    visibility = case options[:visibility]
+    Deb::S3::Utils.access_policy = case options[:visibility]
     when "public"
       :public_read
     when "private"
@@ -61,6 +61,7 @@ class Deb::S3::CLI < Thor
     else
       error("Invalid visibility setting given. Can be public, private, or authenticated.")
     end
+    Deb::S3::Utils.bucket = options[:bucket]
 
     log("Examining package file #{File.basename(file)}")
     pkg = Deb::S3::Package.parse_file(file)
@@ -90,32 +91,17 @@ class Deb::S3::CLI < Thor
       :secret_access_key => secret_key
     )
 
-    log("Retrieving existing package manifest")
-    manifest = Deb::S3::Manifest.open(options[:bucket], options[:codename], options[:section], arch)
-
-    # set the access policy
-    manifest.policy = visibility
+    log("Retrieving existing manifests")
+    release  = Deb::S3::Release.retrieve(options[:codename])
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
 
     # add in the package
     manifest.add(pkg)
 
     log("Uploading package and new manifests to S3")
-
-    # create the i386 ones so apt-get doesn't cry
-    # m = Deb::S3::Manifest.new
-    # m.bucket = options[:bucket]
-    # m.codename = options[:codename]
-    # m.components << options[:section]
-    # m.architecture = "i386"
-    # m.policy = visibility
-    # m.write_to_s3 do |f|
-    #   sublog("Transferring #{f}")
-    # end
-
-    # do the main manifests
-    manifest.write_to_s3 do |f|
-      sublog("Transferring #{f}")
-    end
+    manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+    release.update_manifest(manifest)
+    release.write_to_s3 { |f| sublog("Transferring #{f}") }
 
     log("Update complete.")
   end

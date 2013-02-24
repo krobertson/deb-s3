@@ -4,45 +4,41 @@ require "zlib"
 class Deb::S3::Manifest
   include Deb::S3::Utils
 
-  class << self
-    def parse_packages(str)
-      m = self.new
-      str.split("\n\n").each do |s|
-        m.add Deb::S3::Package.parse_string(s)
-      end
-      m
-    end
+  attr_accessor :codename
+  attr_accessor :component
+  attr_accessor :architecture
 
-    def open(bucket, codename, component, architecture)
-      filename = "dists/#{codename}/#{component}/binary-#{architecture}/Packages"
-      m = if AWS::S3::S3Object.exists?(filename, bucket)
-        s = ""
-        AWS::S3::S3Object.stream(filename, bucket) do |chunk|
-          s += chunk
-        end
+  attr_accessor :files
+
+  def initialize
+    @packages = []
+    @component = nil
+    @architecture = nil
+    @files = {}
+  end
+
+  class << self
+    def retrieve(codename, component, architecture)
+      m = if s = Deb::S3::Utils.s3_read("dists/#{codename}/#{component}/binary-#{architecture}/Packages")
         self.parse_packages(s)
       else
         self.new
       end
 
       m.codename = codename
-      m.components << component
+      m.component = component
       m.architecture = architecture
       m
     end
-  end
 
-  attr_accessor :codename
-  attr_accessor :components
-  attr_accessor :architecture
-
-  attr_accessor :policy
-  attr_accessor :bucket
-
-  def initialize
-    @packages = []
-    @components = []
-    @policy = :public_read
+    def parse_packages(str)
+      m = self.new
+      str.split("\n\n").each do |s|
+        next if s.chomp.empty?
+        m.packages << Deb::S3::Package.parse_string(s)
+      end
+      m
+    end
   end
 
   def packages
@@ -61,13 +57,12 @@ class Deb::S3::Manifest
 
   def write_to_s3
     manifest = self.generate
-    @files = {}
 
     # store any packages that need to be stored
     @packages.each do |pkg|
       if pkg.needs_uploading?
         yield pkg.url_filename if block_given?
-        store(pkg.filename, @policy, pkg.url_filename)
+        s3_store(pkg.filename, pkg.url_filename)
       end
     end
 
@@ -75,27 +70,21 @@ class Deb::S3::Manifest
     pkgs_temp = Tempfile.new("Packages")
     pkgs_temp.puts manifest
     pkgs_temp.close
-    f = "dists/#{@codename}/#{@components.first}/binary-#{@architecture}/Packages"
+    f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages"
     yield f if block_given?
-    store(pkgs_temp.path, @policy, f)
-    @files["Packages"] = hashfile(pkgs_temp.path)
+    s3_store(pkgs_temp.path, f)
+    @files["#{@component}/binary-#{@architecture}/Packages"] = hashfile(pkgs_temp.path)
+    pkgs_temp.unlink
 
     # generate the Packages.gz file
     gztemp = Tempfile.new("Packages.gz")
     gztemp.close
     Zlib::GzipWriter.open(gztemp.path) { |gz| gz.write manifest }
-    f = "dists/#{@codename}/#{@components.first}/binary-#{@architecture}/Packages.gz"
+    f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages.gz"
     yield f if block_given?
-    store(gztemp.path, @policy, f)
-    @files["Packages.gz"] = hashfile(gztemp.path)
-
-    # generate the Release file
-    release = Deb::S3::Release.new
-    release.codename = @codename
-    release.files = @files
-    release.policy = @policy
-    yield release.filename if block_given?
-    release.upload
+    s3_store(gztemp.path, f)
+    @files["#{@component}/binary-#{@architecture}/Packages.gz"] = hashfile(gztemp.path)
+    gztemp.unlink
 
     nil
   end
