@@ -68,7 +68,7 @@ class Deb::S3::Manifest
 
     # generate the Packages file
     pkgs_temp = Tempfile.new("Packages")
-    pkgs_temp.puts manifest
+    pkgs_temp.write manifest
     pkgs_temp.close
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages"
     yield f if block_given?
