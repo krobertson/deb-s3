@@ -69,5 +69,4 @@ Uploads the given FILE to a S3 bucket as an APT repository.
 This is still experimental.  These are several things to be done:
 
 * Don't re-upload a package if it already exists and has the same hashes.
-* Currently requires dpkg... make it use 'ar' if dpkg isn't available.
 * Clean up the code some more.

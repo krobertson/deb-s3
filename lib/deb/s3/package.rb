@@ -2,6 +2,7 @@ require "digest/sha1"
 require "digest/sha2"
 require "digest/md5"
 require "socket"
+require "tmpdir"
 
 class Deb::S3::Package
   include Deb::S3::Utils
@@ -39,9 +40,11 @@ class Deb::S3::Package
   attr_accessor :filename
 
   class << self
+    include Deb::S3::Utils
+
     def parse_file(package)
       p = self.new
-      p.extract_info(`dpkg -f #{package}`)
+      p.extract_info(extract_control(package))
       p.apply_file_info(package)
       p.filename = package
       p
@@ -51,6 +54,17 @@ class Deb::S3::Package
       p = self.new
       p.extract_info(s)
       p
+    end
+
+    def extract_control(package)
+      if system("which dpkg 2>&1 >/dev/null")
+        `dpkg -f #{package}`
+      else
+        Dir.mktmpdir do |path|
+          safesystem("ar p #{package} control.tar.gz | tar -zxf - -C #{path}")
+          File.read(File.join(path, "control"))
+        end
+      end
     end
   end
 
