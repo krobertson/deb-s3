@@ -12,25 +12,30 @@ class Deb::S3::CLI < Thor
   option :bucket,
     :required => true,
     :type     => :string,
+    :aliases  => "-b",
     :desc     => "The name of the S3 bucket to upload to."
 
   option :codename,
     :default  => "stable",
     :type     => :string,
+    :aliases  => "-c",
     :desc     => "The codename of the APT repository."
 
   option :section,
     :default  => "main",
     :type     => :string,
+    :aliases  => "-s",
     :desc     => "The section of the APT repository."
 
   option :arch,
     :type     => :string,
+    :aliases  => "-a",
     :desc     => "The architecture of the package in the APT repository."
 
   option :visibility,
     :default  => "public",
     :type     => :string,
+    :aliases  => "-v",
     :desc     => "The access policy for the uploaded files. " +
                  "Can be public, private, or authenticated."
 

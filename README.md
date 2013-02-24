@@ -45,21 +45,21 @@ $ deb-s3 upload my-deb-package-1.0.0_amd64.deb --bucket my-bucket
 
 ```
 Usage:
-  deb-s3 upload FILE --bucket=BUCKET
+  deb-s3 upload FILE -b, --bucket=BUCKET
 
 Options:
-  --bucket=BUCKET            # The name of the S3 bucket to upload to.
-  [--codename=CODENAME]      # The codename of the APT repository.
-                             # Default: stable
-  [--section=SECTION]        # The section of the APT repository.
-                             # Default: main
-  [--arch=ARCH]              # The architecture of the package in the APT repository.
-  [--visibility=VISIBILITY]  # The access policy for the uploaded files. Can be public, private, or authenticated.
-                             # Default: public
-  [--access-key=ACCESS_KEY]  # The access key for connecting to S3.
-                             # Default: $AMAZON_ACCESS_KEY_ID
-  [--secret-key=SECRET_KEY]  # The secret key for connecting to S3.
-                             # Default: $AMAZON_SECRET_ACCESS_KEY
+  -b, --bucket=BUCKET            # The name of the S3 bucket to upload to.
+  -c, [--codename=CODENAME]      # The codename of the APT repository.
+                                 # Default: stable
+  -s, [--section=SECTION]        # The section of the APT repository.
+                                 # Default: main
+  -a, [--arch=ARCH]              # The architecture of the package in the APT repository.
+  -v, [--visibility=VISIBILITY]  # The access policy for the uploaded files. Can be public, private, or authenticated.
+                                 # Default: public
+      [--access-key=ACCESS_KEY]  # The access key for connecting to S3.
+                                 # Default: $AMAZON_ACCESS_KEY_ID
+      [--secret-key=SECRET_KEY]  # The secret key for connecting to S3.
+                                 # Default: $AMAZON_SECRET_ACCESS_KEY
 
 Uploads the given FILE to a S3 bucket as an APT repository.
 ```
