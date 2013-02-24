@@ -68,8 +68,6 @@ Uploads the given FILE to a S3 bucket as an APT repository.
 
 This is still experimental.  These are several things to be done:
 
-* Properly create bare package manifests for the opposite arch so apt-get doesn't
-  cry.
-* Have the release manifest retain manifests for the other archs.
 * Don't re-upload a package if it already exists and has the same hashes.
-* Clean up the code.
+* Currently requires dpkg... make it use 'ar' if dpkg isn't available.
+* Clean up the code some more.
