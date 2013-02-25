@@ -122,8 +122,7 @@ class Deb::S3::Package
   end
 
   def url_filename_encoded
-    u = self.url_filename
-    File.join(File.dirname(u), s3_escape(File.basename(u)))
+    @url_filename || "pool/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
   end
 
   def needs_uploading?
