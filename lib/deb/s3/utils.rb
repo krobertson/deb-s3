@@ -28,6 +28,13 @@ module Deb::S3::Utils
     ERB.new(template_code, nil, "-")
   end
 
+  # from fog, Fog::AWS.escape
+  def s3_escape(string)
+    string.gsub(/([^a-zA-Z0-9_.\-~]+)/) {
+      "%" + $1.unpack("H2" * $1.bytesize).join("%").upcase
+    }
+  end
+
   def s3_exists?(path)
     AWS::S3::S3Object.exists?(path, Deb::S3::Utils.bucket)
   end

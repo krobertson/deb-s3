@@ -62,7 +62,7 @@ class Deb::S3::Manifest
     @packages.each do |pkg|
       if pkg.needs_uploading?
         yield pkg.url_filename if block_given?
-        s3_store(pkg.filename, pkg.url_filename)
+        s3_store(pkg.filename, pkg.url_filename_encoded)
       end
     end
 

@@ -31,7 +31,7 @@ Suggests: <%= attributes[:deb_suggests].collect { |d| fix_dependency(d) }.flatte
 Section: <%= category %>
 Priority: <%= attributes[:deb_priority] %>
 Homepage: <%= url or "http://nourlgiven.example.com/" %>
-Filename: <%= url_filename %>
+Filename: <%= url_filename_encoded %>
 <% if size -%>
 Size: <%= size %>
 <% end -%>
