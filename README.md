@@ -23,9 +23,18 @@ With `deb-s3`, there is no need for this. `deb-s3` features:
 
 ## Getting Started
 
-Simply run Bundler to ensure all dependencies are installed:
+You can simply install it from rubygems:
 
 ```console
+$ gem install deb-s3
+```
+
+Or to run the code directly, just check out the repo and run Bundler to ensure
+all dependencies are installed:
+
+```console
+$ git clone https://github.com/krobertson/deb-s3.git
+$ cd deb-s3
 $ bundle install
 ```
 
