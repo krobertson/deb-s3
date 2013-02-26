@@ -50,15 +50,17 @@ class Deb::S3::CLI < Thor
     :desc     => "The secret key for connecting to S3."
 
   option :sign,
-    :default  => false,
-    :type     => :boolean,
-    :desc     => "Should sign the Release file when uploading."
+    :default  => "",
+    :type     => :string,
+    :desc     => "Sign the Release file. Use --sign with your key ID to use " +
+                 "a specific key."
 
   desc "upload FILE",
     "Uploads the given FILE to a S3 bucket as an APT repository."
   def upload(file)
     # make sure the file exists
     error("File doesn't exist") unless File.exists?(file)
+    Deb::S3::Utils.signing_key = options[:sign]
 
     # make sure we have a valid visibility setting
     Deb::S3::Utils.access_policy = case options[:visibility]
@@ -111,7 +113,7 @@ class Deb::S3::CLI < Thor
     log("Uploading package and new manifests to S3")
     manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
     release.update_manifest(manifest)
-    release.write_to_s3(options[:sign]) { |f| sublog("Transferring #{f}") }
+    release.write_to_s3 { |f| sublog("Transferring #{f}") }
 
     log("Update complete.")
   end

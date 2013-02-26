@@ -6,7 +6,7 @@ PATH
       thor (~> 0.17.0)
 
 GEM
-  remote: http://rubygems.org/
+  remote: https://rubygems.org/
   specs:
     aws-s3 (0.6.3)
       builder

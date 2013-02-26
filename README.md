@@ -60,6 +60,7 @@ Options:
                                  # Default: $AMAZON_ACCESS_KEY_ID
       [--secret-key=SECRET_KEY]  # The secret key for connecting to S3.
                                  # Default: $AMAZON_SECRET_ACCESS_KEY
+      [--sign=SIGN]              # Sign the Release file. Use --sign with your key ID to use a specific key.
 
 Uploads the given FILE to a S3 bucket as an APT repository.
 ```

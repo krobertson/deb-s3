@@ -7,6 +7,8 @@ module Deb::S3::Utils
   def bucket= v; @bucket = v end
   def access_policy; @access_policy end
   def access_policy= v; @access_policy = v end
+  def signing_key; @signing_key end
+  def signing_key= v; @signing_key = v end
 
   def safesystem(*args)
     success = system(*args)

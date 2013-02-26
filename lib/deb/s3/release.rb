@@ -73,7 +73,7 @@ class Deb::S3::Release
     template("release.erb").result(binding)
   end
 
-  def write_to_s3(sign=false)
+  def write_to_s3
     # validate some other files are present
     if block_given?
       self.validate_others { |f| yield f }
@@ -89,8 +89,9 @@ class Deb::S3::Release
     s3_store(release_tmp.path, self.filename)
 
     # sign the file, if necessary
-    if sign
-      if system("gpg -a -b #{release_tmp.path}")
+    if Deb::S3::Utils.signing_key
+      key_param = Deb::S3::Utils.signing_key != "" ? "--default-key=#{Deb::S3::Utils.signing_key}" : ""
+      if system("gpg -a #{key_param} -b #{release_tmp.path}")
         local_file = release_tmp.path+".asc"
         remote_file = self.filename+".gpg"
         yield remote_file if block_given?
