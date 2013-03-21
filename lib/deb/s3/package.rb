@@ -146,12 +146,12 @@ class Deb::S3::Package
       m = dep_re.match(dep)
       if m
         name, op, version = m.captures
-        # deb uses ">>" and "<<" for greater and less than respectively. 
-        # fpm wants just ">" and "<"
-        op = "<" if op == "<<"
-        op = ">" if op == ">>"
         # this is the proper form of dependency
-        "#{name} #{op} #{version}"
+        if op && version && op != "" && version != ""
+          "#{name} (#{op} #{version})".strip
+        else
+          name.strip
+        end
       else
         # Assume normal form dependency, "name op version".
         dep
