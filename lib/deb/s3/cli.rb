@@ -55,6 +55,14 @@ class Deb::S3::CLI < Thor
     :desc     => "Sign the Release file. Use --sign with your key ID to use " +
                  "a specific key."
 
+  option :preserve_versions,
+    :default  => "no",
+    :type     => :string,
+    :aliases  => "-p",
+    :desc     => "Whether to preserve other versions of a package " + 
+                 "in the repository when uploading one. " +
+                 "Can be yes, or no."
+
   desc "upload FILE",
     "Uploads the given FILE to a S3 bucket as an APT repository."
   def upload(file)
@@ -108,7 +116,8 @@ class Deb::S3::CLI < Thor
     manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
 
     # add in the package
-    manifest.add(pkg)
+    preserve = options[:preserve_versions]
+    manifest.add(pkg, preserve)
 
     log("Uploading package and new manifests to S3")
     manifest.write_to_s3 { |f| sublog("Transferring #{f}") }

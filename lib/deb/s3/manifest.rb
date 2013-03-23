@@ -45,8 +45,12 @@ class Deb::S3::Manifest
     @packages
   end
 
-  def add(pkg)
-    @packages.delete_if { |p| p.name == pkg.name }
+  def add(pkg, preserve)
+    if preserve == "no"
+      @packages.delete_if { |p| p.name == pkg.name }
+    else
+      @packages.delete_if { |p| p.name == pkg.name && p.version == pkg.version}
+    end
     @packages << pkg
     pkg
   end
