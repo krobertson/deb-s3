@@ -17,7 +17,8 @@ script out the build process, and then would prefer to just upload the final
 With `deb-s3`, there is no need for this. `deb-s3` features:
 
 * Downloads the existing package manifest and parses it.
-* Updates it with the new package, replacing the existing entry if already there.
+* Updates it with the new package, replacing the existing entry if already there or
+* adding a new one if not.
 * Uploads the package itself, the Packages manifest, and the Packages.gz manifest.
 * Updates the Release file with the new hashes and file sizes.
 
@@ -57,19 +58,21 @@ Usage:
   deb-s3 upload FILE -b, --bucket=BUCKET
 
 Options:
-  -b, --bucket=BUCKET            # The name of the S3 bucket to upload to.
-  -c, [--codename=CODENAME]      # The codename of the APT repository.
-                                 # Default: stable
-  -s, [--section=SECTION]        # The section of the APT repository.
-                                 # Default: main
-  -a, [--arch=ARCH]              # The architecture of the package in the APT repository.
-  -v, [--visibility=VISIBILITY]  # The access policy for the uploaded files. Can be public, private, or authenticated.
-                                 # Default: public
-      [--access-key=ACCESS_KEY]  # The access key for connecting to S3.
-                                 # Default: $AMAZON_ACCESS_KEY_ID
-      [--secret-key=SECRET_KEY]  # The secret key for connecting to S3.
-                                 # Default: $AMAZON_SECRET_ACCESS_KEY
-      [--sign=SIGN]              # Sign the Release file. Use --sign with your key ID to use a specific key.
+  -b, --bucket=BUCKET                          # The name of the S3 bucket to upload to.
+  -c, [--codename=CODENAME]                    # The codename of the APT repository.
+                                               # Default: stable
+  -s, [--section=SECTION]                      # The section of the APT repository.
+                                               # Default: main
+  -a, [--arch=ARCH]                            # The architecture of the package in the APT repository.
+  -v, [--visibility=VISIBILITY]                # The access policy for the uploaded files. Can be public, private, or authenticated.
+                                               # Default: public
+  -p, [--preserve-versions=PRESERVE_VERSIONS]  # Whether to preserve other versions of a package in the repository when uploading one. Can be yes, or no.
+                                               # Default: no
+      [--access-key=ACCESS_KEY]                # The access key for connecting to S3.
+                                               # Default: $AMAZON_ACCESS_KEY_ID
+      [--secret-key=SECRET_KEY]                # The secret key for connecting to S3.
+                                               # Default: $AMAZON_SECRET_ACCESS_KEY
+      [--sign=SIGN]                            # Sign the Release file. Use --sign with your key ID to use a specific key.
 
 Uploads the given FILE to a S3 bucket as an APT repository.
 ```
