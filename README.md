@@ -58,21 +58,21 @@ Usage:
   deb-s3 upload FILE -b, --bucket=BUCKET
 
 Options:
-      [--secret-key=SECRET_KEY]                # The secret key for connecting to S3.
-                                               # Default: $AMAZON_SECRET_ACCESS_KEY
-  -p, [--preserve-versions=PRESERVE_VERSIONS]  # Whether to preserve other versions of a package in the repository when uploading one. Can be yes, or no.
-                                               # Default: no
+  -b, --bucket=BUCKET                          # The name of the S3 bucket to upload to.
   -c, [--codename=CODENAME]                    # The codename of the APT repository.
                                                # Default: stable
   -s, [--section=SECTION]                      # The section of the APT repository.
                                                # Default: main
-  -b, --bucket=BUCKET                          # The name of the S3 bucket to upload to.
-      [--sign=SIGN]                            # Sign the Release file. Use --sign with your key ID to use a specific key.
+  -a, [--arch=ARCH]                            # The architecture of the package in the APT repository.
   -v, [--visibility=VISIBILITY]                # The access policy for the uploaded files. Can be public, private, or authenticated.
                                                # Default: public
-  -a, [--arch=ARCH]                            # The architecture of the package in the APT repository.
+  -p, [--preserve-versions=PRESERVE_VERSIONS]  # Whether to preserve other versions of a package in the repository when uploading one. Can be yes, or no.
+                                               # Default: no
       [--access-key=ACCESS_KEY]                # The access key for connecting to S3.
                                                # Default: $AMAZON_ACCESS_KEY_ID
+      [--secret-key=SECRET_KEY]                # The secret key for connecting to S3.
+                                               # Default: $AMAZON_SECRET_ACCESS_KEY
+      [--sign=SIGN]                            # Sign the Release file. Use --sign with your key ID to use a specific key.
 
 Uploads the given FILE to a S3 bucket as an APT repository.
 ```
