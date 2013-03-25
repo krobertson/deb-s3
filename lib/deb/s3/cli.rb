@@ -56,12 +56,11 @@ class Deb::S3::CLI < Thor
                  "a specific key."
 
   option :preserve_versions,
-    :default  => "no",
-    :type     => :string,
+    :default  => false,
+    :type     => :boolean,
     :aliases  => "-p",
     :desc     => "Whether to preserve other versions of a package " + 
-                 "in the repository when uploading one. " +
-                 "Can be yes, or no."
+                 "in the repository when uploading one."
 
   desc "upload FILE",
     "Uploads the given FILE to a S3 bucket as an APT repository."
@@ -116,8 +115,7 @@ class Deb::S3::CLI < Thor
     manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
 
     # add in the package
-    preserve = options[:preserve_versions]
-    manifest.add(pkg, preserve)
+    manifest.add(pkg, options[:preserve_versions])
 
     log("Uploading package and new manifests to S3")
     manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
