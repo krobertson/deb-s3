@@ -10,15 +10,17 @@ sync the files to S3.
 
 The annoying thing about this process is it requires you to maintain a local
 copy of the file tree for regenerating and syncing the next time. Personally,
-my process is to use one-off virtual machines with [Vagrant](http://vagrantup.com),
-script out the build process, and then would prefer to just upload the final
-`.deb` from my Mac.
+my process is to use one-off virtual machines with
+[Vagrant](http://vagrantup.com), script out the build process, and then would
+prefer to just upload the final `.deb` from my Mac.
 
 With `deb-s3`, there is no need for this. `deb-s3` features:
 
 * Downloads the existing package manifest and parses it.
-* Updates it with the new package, replacing the existing entry if already there or adding a new one if not.
-* Uploads the package itself, the Packages manifest, and the Packages.gz manifest.
+* Updates it with the new package, replacing the existing entry if already
+  there or adding a new one if not.
+* Uploads the package itself, the Packages manifest, and the Packages.gz
+  manifest.
 * Updates the Release file with the new hashes and file sizes.
 
 ## Getting Started
@@ -80,4 +82,3 @@ Uploads the given FILE to a S3 bucket as an APT repository.
 This is still experimental.  These are several things to be done:
 
 * Don't re-upload a package if it already exists and has the same hashes.
-* Clean up the code some more.
