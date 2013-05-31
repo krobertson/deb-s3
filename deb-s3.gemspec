@@ -16,6 +16,4 @@ Gem::Specification.new do |gem|
 
   gem.add_dependency "thor",   "~> 0.17.0"
   gem.add_dependency "aws-s3", "~> 0.6.3"
-  
-  gem.add_development_dependency "rake"
 end
