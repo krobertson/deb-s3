@@ -71,6 +71,7 @@ Options:
                                  # Default: $AMAZON_ACCESS_KEY_ID
       [--secret-key=SECRET_KEY]  # The secret key for connecting to S3.
                                  # Default: $AMAZON_SECRET_ACCESS_KEY
+      [--endpoint=AWS_ENDPOINT]  # The aws region endpoint for connecting to S3.
       [--sign=SIGN]              # Sign the Release file. Use --sign with your key ID to use a specific key.
   -p, [--preserve-versions]      # Whether to preserve other versions of a package in the repository when uploading one.
 
