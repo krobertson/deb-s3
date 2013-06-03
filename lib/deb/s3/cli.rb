@@ -54,7 +54,6 @@ class Deb::S3::CLI < Thor
     :desc     => "The region endpoint for connecting to S3."
 
   option :sign,
-    :default  => "",
     :type     => :string,
     :desc     => "Sign the Release file. Use --sign with your key ID to use " +
                  "a specific key."
