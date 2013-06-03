@@ -48,9 +48,12 @@ class Deb::S3::CLI < Thor
     :default  => "$AMAZON_SECRET_ACCESS_KEY",
     :type     => :string,
     :desc     => "The secret key for connecting to S3."
+  
+  option :endpoint,
+    :type     => :string,
+    :desc     => "The region endpoint for connecting to S3."
 
   option :sign,
-    :default  => "",
     :type     => :string,
     :desc     => "Sign the Release file. Use --sign with your key ID to use " +
                  "a specific key."
@@ -109,6 +112,9 @@ class Deb::S3::CLI < Thor
       :access_key_id     => access_key,
       :secret_access_key => secret_key
     )
+    if options[:endpoint]
+      AWS::S3::DEFAULT_HOST.replace options[:endpoint]
+    end
 
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename])
