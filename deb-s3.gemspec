@@ -14,6 +14,6 @@ Gem::Specification.new do |gem|
 
   gem.files = Dir["**/*"].select { |d| d =~ %r{^(README|bin/|ext/|lib/)} }
 
-  gem.add_dependency "thor",   "~> 0.17.0"
+  gem.add_dependency "thor",   "~> 0.18.0"
   gem.add_dependency "aws-s3", "~> 0.6.3"
 end
