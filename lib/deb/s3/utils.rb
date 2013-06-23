@@ -59,6 +59,6 @@ module Deb::S3::Utils
   end
 
   def s3_remove(path)
-    AWS::S3::S3Object.delete(Deb::S3::Utils.bucket, path) if s3_exists?(path)
+    AWS::S3::S3Object.delete(path, Deb::S3::Utils.bucket) if s3_exists?(path)
   end
 end
