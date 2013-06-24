@@ -41,6 +41,13 @@ class Deb::S3::CLI < Thor
     :type     => :string,
     :desc     => "The region endpoint for connecting to S3."
 
+  class_option :visibility,
+    :default  => "public",
+    :type     => :string,
+    :aliases  => "-v",
+    :desc     => "The access policy for the uploaded files. " +
+                 "Can be public, private, or authenticated."
+
   desc "upload FILE",
     "Uploads the given FILE to a S3 bucket as an APT repository."
 
@@ -48,13 +55,6 @@ class Deb::S3::CLI < Thor
     :type     => :string,
     :aliases  => "-a",
     :desc     => "The architecture of the package in the APT repository."
-
-  option :visibility,
-    :default  => "public",
-    :type     => :string,
-    :aliases  => "-v",
-    :desc     => "The access policy for the uploaded files. " +
-                 "Can be public, private, or authenticated."
 
   option :sign,
     :type     => :string,
@@ -76,18 +76,6 @@ class Deb::S3::CLI < Thor
     configure_s3_client
 
     Deb::S3::Utils.signing_key = options[:sign]
-
-    # make sure we have a valid visibility setting
-    Deb::S3::Utils.access_policy = case options[:visibility]
-    when "public"
-      :public_read
-    when "private"
-      :private
-    when "authenticated"
-      :authenticated_read
-    else
-      error("Invalid visibility setting given. Can be public, private, or authenticated.")
-    end
 
     log("Examining package file #{File.basename(file)}")
     pkg = Deb::S3::Package.parse_file(file)
@@ -198,6 +186,17 @@ class Deb::S3::CLI < Thor
     AWS::S3::DEFAULT_HOST.replace options[:endpoint] if options[:endpoint]
 
     Deb::S3::Utils.bucket = options[:bucket]
-  end
 
+    # make sure we have a valid visibility setting
+    Deb::S3::Utils.access_policy = case options[:visibility]
+    when "public"
+      :public_read
+    when "private"
+      :private
+    when "authenticated"
+      :authenticated_read
+    else
+      error("Invalid visibility setting given. Can be public, private, or authenticated.")
+    end
+  end
 end
