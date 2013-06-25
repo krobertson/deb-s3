@@ -21,11 +21,11 @@ class Deb::S3::CLI < Thor
     :aliases  => "-c",
     :desc     => "The codename of the APT repository."
 
-  class_option :section,
-    :default  => "main",
+  class_option :component,
+    :default  => "non-free",
     :type     => :string,
-    :aliases  => "-s",
-    :desc     => "The section of the APT repository."
+    :aliases  => "-m",
+    :desc     => "The component of the APT repository."
 
   class_option :access_key,
     :default  => "$AMAZON_ACCESS_KEY_ID",
@@ -89,7 +89,7 @@ class Deb::S3::CLI < Thor
 
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:component], arch)
 
     # add in the package
     manifest.add(pkg, options[:preserve_versions])
