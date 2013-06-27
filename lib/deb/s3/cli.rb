@@ -10,7 +10,6 @@ require "deb/s3/release"
 class Deb::S3::CLI < Thor
 
   class_option :bucket,
-    :required => true,
     :type     => :string,
     :aliases  => "-b",
     :desc     => "The name of the S3 bucket to upload to."
@@ -189,6 +188,7 @@ class Deb::S3::CLI < Thor
   def configure_s3_client
     error("No access key given for S3. Please specify one.") unless access_key
     error("No secret access key given for S3. Please specify one.") unless secret_key
+    error("No value provided for required options '--bucket'") unless options[:bucket]
 
     AWS::S3::Base.establish_connection!(
       :access_key_id     => access_key,
