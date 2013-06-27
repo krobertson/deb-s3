@@ -117,8 +117,8 @@ class Deb::S3::CLI < Thor
     release = Deb::S3::Release.retrieve(options[:codename])
 
     %w[i386 amd64 all].each do |arch|
-      log("Checking for missing packages in: #{options[:codename]}/#{options[:section]} #{arch}")
-      manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
+      log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:component], arch)
       missing_packages = []
 
       manifest.packages.each do |p|
