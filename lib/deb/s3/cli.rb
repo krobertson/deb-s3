@@ -21,7 +21,7 @@ class Deb::S3::CLI < Thor
     :desc     => "The codename of the APT repository."
 
   class_option :component,
-    :default  => "non-free",
+    :default  => "main",
     :type     => :string,
     :aliases  => "-m",
     :desc     => "The component of the APT repository."
