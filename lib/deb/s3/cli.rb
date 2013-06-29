@@ -20,11 +20,11 @@ class Deb::S3::CLI < Thor
     :aliases  => "-c",
     :desc     => "The codename of the APT repository."
 
-  class_option :section,
-    :default  => "main",
+  class_option :component,
+    :default  => "non-free",
     :type     => :string,
-    :aliases  => "-s",
-    :desc     => "The section of the APT repository."
+    :aliases  => "-m",
+    :desc     => "The component of the APT repository."
 
   class_option :access_key,
     :default  => "$AMAZON_ACCESS_KEY_ID",
@@ -40,6 +40,13 @@ class Deb::S3::CLI < Thor
     :type     => :string,
     :desc     => "The region endpoint for connecting to S3."
 
+  class_option :visibility,
+    :default  => "public",
+    :type     => :string,
+    :aliases  => "-v",
+    :desc     => "The access policy for the uploaded files. " +
+                 "Can be public, private, or authenticated."
+
   desc "upload FILES",
     "Uploads the given files to a S3 bucket as an APT repository."
 
@@ -47,13 +54,6 @@ class Deb::S3::CLI < Thor
     :type     => :string,
     :aliases  => "-a",
     :desc     => "The architecture of the package in the APT repository."
-
-  option :visibility,
-    :default  => "public",
-    :type     => :string,
-    :aliases  => "-v",
-    :desc     => "The access policy for the uploaded files. " +
-                 "Can be public, private, or authenticated."
 
   option :sign,
     :type     => :string,
@@ -82,18 +82,6 @@ class Deb::S3::CLI < Thor
 
     Deb::S3::Utils.signing_key = options[:sign]
 
-    # make sure we have a valid visibility setting
-    Deb::S3::Utils.access_policy = case options[:visibility]
-    when "public"
-      :public_read
-    when "private"
-      :private
-    when "authenticated"
-      :authenticated_read
-    else
-      error("Invalid visibility setting given. Can be public, private, or authenticated.")
-    end
-
     # retrieve the existing manifests
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename])
@@ -112,7 +100,7 @@ class Deb::S3::CLI < Thor
             "Please specify one with --arch [i386,amd64].") unless arch
 
       # retrieve the manifest for the arch if we don't have it already
-      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
+      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], options[:component], arch)
 
       # add in the package
       manifests[arch].add(pkg, options[:preserve_versions])
@@ -144,8 +132,8 @@ class Deb::S3::CLI < Thor
     release = Deb::S3::Release.retrieve(options[:codename])
 
     %w[i386 amd64 all].each do |arch|
-      log("Checking for missing packages in: #{options[:codename]}/#{options[:section]} #{arch}")
-      manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
+      log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:component], arch)
       missing_packages = []
 
       manifest.packages.each do |p|
@@ -214,6 +202,17 @@ class Deb::S3::CLI < Thor
     AWS::S3::DEFAULT_HOST.replace options[:endpoint] if options[:endpoint]
 
     Deb::S3::Utils.bucket = options[:bucket]
-  end
 
+    # make sure we have a valid visibility setting
+    Deb::S3::Utils.access_policy = case options[:visibility]
+    when "public"
+      :public_read
+    when "private"
+      :private
+    when "authenticated"
+      :authenticated_read
+    else
+      error("Invalid visibility setting given. Can be public, private, or authenticated.")
+    end
+  end
 end
