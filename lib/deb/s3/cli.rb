@@ -26,6 +26,11 @@ class Deb::S3::CLI < Thor
     :aliases  => "-m",
     :desc     => "The component of the APT repository."
 
+  class_option :section,
+    :type     => :string,
+    :aliases  => "-s",
+    :hide     => true
+
   class_option :access_key,
     :default  => "$AMAZON_ACCESS_KEY_ID",
     :type     => :string,
@@ -68,6 +73,12 @@ class Deb::S3::CLI < Thor
                  "in the repository when uploading one."
 
   def upload(*files)
+    component = options[:component]
+    if options[:section]
+      component = options[:section]
+      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
+    end
+
     if files.nil? || files.empty?
       error("You must specify at least one file to upload")
     end
@@ -100,7 +111,7 @@ class Deb::S3::CLI < Thor
             "Please specify one with --arch [i386,amd64].") unless arch
 
       # retrieve the manifest for the arch if we don't have it already
-      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], options[:component], arch)
+      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch)
 
       # add in the package
       manifests[arch].add(pkg, options[:preserve_versions])
@@ -126,6 +137,12 @@ class Deb::S3::CLI < Thor
     :desc     => "Whether to fix problems in manifests when verifying."
 
   def verify
+    component = options[:component]
+    if options[:section]
+      component = options[:section]
+      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
+    end
+
     configure_s3_client
 
     log("Retrieving existing manifests")
@@ -133,7 +150,7 @@ class Deb::S3::CLI < Thor
 
     %w[i386 amd64 all].each do |arch|
       log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
-      manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:component], arch)
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
       missing_packages = []
 
       manifest.packages.each do |p|
