@@ -43,7 +43,7 @@ $ bundle install
 Now to upload a package, simply use:
 
 ```console
-$ deb-s3 upload my-deb-package-1.0.0_amd64.deb --bucket my-bucket
+$ deb-s3 upload --bucket my-bucket my-deb-package-1.0.0_amd64.deb
 >> Examining package file my-deb-package-1.0.0_amd64.deb
 >> Retrieving existing package manifest
 >> Uploading package and new manifests to S3
@@ -56,7 +56,7 @@ $ deb-s3 upload my-deb-package-1.0.0_amd64.deb --bucket my-bucket
 
 ```
 Usage:
-  deb-s3 upload FILE
+  deb-s3 upload FILES
 
 Options:
   -a, [--arch=ARCH]              # The architecture of the package in the APT repository.

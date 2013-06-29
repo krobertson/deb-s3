@@ -40,8 +40,8 @@ class Deb::S3::CLI < Thor
     :type     => :string,
     :desc     => "The region endpoint for connecting to S3."
 
-  desc "upload FILE",
-    "Uploads the given FILE to a S3 bucket as an APT repository."
+  desc "upload FILES",
+    "Uploads the given files to a S3 bucket as an APT repository."
 
   option :arch,
     :type     => :string,
@@ -67,9 +67,15 @@ class Deb::S3::CLI < Thor
     :desc     => "Whether to preserve other versions of a package " +
                  "in the repository when uploading one."
 
-  def upload(file)
-    # make sure the file exists
-    error("File doesn't exist") unless File.exists?(file)
+  def upload(*files)
+    if files.nil? || files.empty?
+      error("You must specify at least one file to upload")
+    end
+
+    # make sure all the files exists
+    if missing_file = files.detect { |f| !File.exists?(f) }
+      error("File '#{missing_file}' doesn't exist")
+    end
 
     # configure AWS::S3
     configure_s3_client
@@ -88,26 +94,36 @@ class Deb::S3::CLI < Thor
       error("Invalid visibility setting given. Can be public, private, or authenticated.")
     end
 
-    log("Examining package file #{File.basename(file)}")
-    pkg = Deb::S3::Package.parse_file(file)
-
-    # copy over some options if they weren't given
-    arch = options[:arch] || pkg.architecture
-
-    # validate we have them
-    error("No architcture given and unable to determine one from the file. " +
-      "Please specify one with --arch [i386,amd64].") unless arch
-
+    # retrieve the existing manifests
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
+    manifests = {}
 
-    # add in the package
-    manifest.add(pkg, options[:preserve_versions])
+    # examine all the files
+    for file in files
+      log("Examining package file #{File.basename(file)}")
+      pkg = Deb::S3::Package.parse_file(file)
 
-    log("Uploading package and new manifests to S3")
-    manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
-    release.update_manifest(manifest)
+      # copy over some options if they weren't given
+      arch = options[:arch] || pkg.architecture
+
+      # validate we have them
+      error("No architcture given and unable to determine one for #{file}. " +
+            "Please specify one with --arch [i386,amd64].") unless arch
+
+      # retrieve the manifest for the arch if we don't have it already
+      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], options[:section], arch)
+
+      # add in the package
+      manifests[arch].add(pkg, options[:preserve_versions])
+    end
+
+    # upload the manifest
+    log("Uploading packages and new manifests to S3")
+    manifests.each_value do |manifest|
+      manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+      release.update_manifest(manifest)
+    end
     release.write_to_s3 { |f| sublog("Transferring #{f}") }
 
     log("Update complete.")
