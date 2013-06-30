@@ -99,7 +99,7 @@ class Deb::S3::CLI < Thor
     manifests = {}
 
     # examine all the files
-    for file in files
+    files.collect { |f| Dir.glob(f) }.flatten.each do |file|
       log("Examining package file #{File.basename(file)}")
       pkg = Deb::S3::Package.parse_file(file)
 
