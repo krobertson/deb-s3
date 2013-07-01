@@ -52,6 +52,12 @@ class Deb::S3::CLI < Thor
     :desc     => "The access policy for the uploaded files. " +
                  "Can be public, private, or authenticated."
 
+  class_option :sign,
+    :type     => :string,
+    :desc     => "Sign the Release file when uploading a package," +
+                 "or when verifying it after removing a package." +
+                 "Use --sign with your key ID to use a specific key."
+
   desc "upload FILES",
     "Uploads the given files to a S3 bucket as an APT repository."
 
@@ -59,11 +65,6 @@ class Deb::S3::CLI < Thor
     :type     => :string,
     :aliases  => "-a",
     :desc     => "The architecture of the package in the APT repository."
-
-  option :sign,
-    :type     => :string,
-    :desc     => "Sign the Release file. Use --sign with your key ID to use " +
-                 "a specific key."
 
   option :preserve_versions,
     :default  => false,
@@ -144,6 +145,8 @@ class Deb::S3::CLI < Thor
     end
 
     configure_s3_client
+
+    Deb::S3::Utils.signing_key = options[:sign]
 
     log("Retrieving existing manifests")
     release = Deb::S3::Release.retrieve(options[:codename])
