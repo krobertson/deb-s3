@@ -94,6 +94,7 @@ Usage:
 
 Options:
   -f, [--fix-manifests]          # Whether to fix problems in manifests when verifying.
+      [--sign=SIGN]              # Sign the Release file. Use --sign with your key ID to use a specific key.
   -b, [--bucket=BUCKET]          # The name of the S3 bucket to upload to.
   -c, [--codename=CODENAME]      # The codename of the APT repository.
                                  # Default: stable
