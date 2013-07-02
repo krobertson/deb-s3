@@ -41,7 +41,7 @@ class Deb::S3::Release
   end
 
   def parse(str)
-    parse = lambda do |field| 
+    parse = lambda do |field|
       value = str[/^#{field}: .*/]
       if value.nil?
         return nil
@@ -91,7 +91,7 @@ class Deb::S3::Release
     # sign the file, if necessary
     if Deb::S3::Utils.signing_key
       key_param = Deb::S3::Utils.signing_key != "" ? "--default-key=#{Deb::S3::Utils.signing_key}" : ""
-      if system("gpg -a #{key_param} -b #{release_tmp.path}")
+      if system("gpg -a #{key_param} #{Deb::S3::Utils.gpg_options} -b #{release_tmp.path}")
         local_file = release_tmp.path+".asc"
         remote_file = self.filename+".gpg"
         yield remote_file if block_given?

@@ -58,6 +58,11 @@ class Deb::S3::CLI < Thor
                  "or when verifying it after removing a package." +
                  "Use --sign with your key ID to use a specific key."
 
+  class_option :gpg_options,
+    :default => "",
+    :type    => :string,
+    :desc    => "Additional command line options to pass to GPG when signing"
+
   desc "upload FILES",
     "Uploads the given files to a S3 bucket as an APT repository."
 
@@ -91,8 +96,6 @@ class Deb::S3::CLI < Thor
 
     # configure AWS::S3
     configure_s3_client
-
-    Deb::S3::Utils.signing_key = options[:sign]
 
     # retrieve the existing manifests
     log("Retrieving existing manifests")
@@ -145,8 +148,6 @@ class Deb::S3::CLI < Thor
     end
 
     configure_s3_client
-
-    Deb::S3::Utils.signing_key = options[:sign]
 
     log("Retrieving existing manifests")
     release = Deb::S3::Release.retrieve(options[:codename])
@@ -221,7 +222,9 @@ class Deb::S3::CLI < Thor
 
     AWS::S3::DEFAULT_HOST.replace options[:endpoint] if options[:endpoint]
 
-    Deb::S3::Utils.bucket = options[:bucket]
+    Deb::S3::Utils.bucket      = options[:bucket]
+    Deb::S3::Utils.signing_key = options[:sign]
+    Deb::S3::Utils.gpg_options = options[:gpg_options]
 
     # make sure we have a valid visibility setting
     Deb::S3::Utils.access_policy = case options[:visibility]
