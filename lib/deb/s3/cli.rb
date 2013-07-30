@@ -225,6 +225,7 @@ class Deb::S3::CLI < Thor
     Deb::S3::Utils.bucket      = options[:bucket]
     Deb::S3::Utils.signing_key = options[:sign]
     Deb::S3::Utils.gpg_options = options[:gpg_options]
+    Deb::S3::Utils.component   = options[:component]
 
     # make sure we have a valid visibility setting
     Deb::S3::Utils.access_policy = case options[:visibility]

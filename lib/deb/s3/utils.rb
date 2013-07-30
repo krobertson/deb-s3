@@ -11,6 +11,8 @@ module Deb::S3::Utils
   def signing_key= v; @signing_key = v end
   def gpg_options; @gpg_options end
   def gpg_options= v; @gpg_options = v end
+  def component; @component end
+  def component= v; @component = v end
 
   def safesystem(*args)
     success = system(*args)

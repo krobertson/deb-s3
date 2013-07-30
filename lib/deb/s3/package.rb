@@ -118,11 +118,11 @@ class Deb::S3::Package
   end
 
   def url_filename
-    @url_filename || "pool/#{self.name[0]}/#{self.name[0..1]}/#{File.basename(self.filename)}"
+    @url_filename || "pool/#{Deb::S3::Utils.component}/#{self.name[0]}/#{self.name[0..1]}/#{File.basename(self.filename)}"
   end
 
   def url_filename_encoded
-    @url_filename || "pool/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
+    @url_filename || "pool/#{Deb::S3::Utils.component}/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
   end
 
   def needs_uploading?
