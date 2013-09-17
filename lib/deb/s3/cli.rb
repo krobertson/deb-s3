@@ -1,4 +1,7 @@
-require 'aws/s3'
+require "json"
+require "net/http"
+
+require "aws/s3"
 require "thor"
 
 require "deb/s3"
@@ -8,75 +11,78 @@ require "deb/s3/package"
 require "deb/s3/release"
 
 class Deb::S3::CLI < Thor
+  AMAZON_ACCESS_KEY_ID     = "AMAZON_ACCESS_KEY_ID"
+  AMAZON_SECRET_ACCESS_KEY = "AMAZON_SECRET_ACCESS_KEY"
+
+  constant :HOST, "169.254.169.254"
+  constant :PATH, "/latest/meta-data/iam/security-credentials/"
 
   class_option :bucket,
-    :type     => :string,
-    :aliases  => "-b",
-    :desc     => "The name of the S3 bucket to upload to."
+  :type     => :string,
+  :aliases  => "-b",
+  :desc     => "The name of the S3 bucket to upload to."
 
   class_option :codename,
-    :default  => "stable",
-    :type     => :string,
-    :aliases  => "-c",
-    :desc     => "The codename of the APT repository."
+  :default  => "stable",
+  :type     => :string,
+  :aliases  => "-c",
+  :desc     => "The codename of the APT repository."
 
   class_option :component,
-    :default  => "main",
-    :type     => :string,
-    :aliases  => "-m",
-    :desc     => "The component of the APT repository."
+  :default  => "main",
+  :type     => :string,
+  :aliases  => "-m",
+  :desc     => "The component of the APT repository."
 
   class_option :section,
-    :type     => :string,
-    :aliases  => "-s",
-    :hide     => true
+  :type     => :string,
+  :aliases  => "-s",
+  :hide     => true
 
   class_option :access_key,
-    :default  => "$AMAZON_ACCESS_KEY_ID",
-    :type     => :string,
-    :desc     => "The access key for connecting to S3."
+  :type     => :string,
+  :desc     => "The access key for connecting to S3."
 
   class_option :secret_key,
-    :default  => "$AMAZON_SECRET_ACCESS_KEY",
-    :type     => :string,
-    :desc     => "The secret key for connecting to S3."
+  :type     => :string,
+  :desc     => "The secret key for connecting to S3."
 
   class_option :endpoint,
-    :type     => :string,
-    :desc     => "The region endpoint for connecting to S3."
+  :type     => :string,
+  :desc     => "The region endpoint for connecting to S3."
 
   class_option :visibility,
-    :default  => "public",
-    :type     => :string,
-    :aliases  => "-v",
-    :desc     => "The access policy for the uploaded files. " +
-                 "Can be public, private, or authenticated."
+  :default  => "public",
+  :type     => :string,
+  :aliases  => "-v",
+  :desc     => "The access policy for the uploaded files. " +
+    "Can be public, private, or authenticated."
 
   class_option :sign,
-    :type     => :string,
-    :desc     => "Sign the Release file when uploading a package," +
-                 "or when verifying it after removing a package." +
-                 "Use --sign with your key ID to use a specific key."
+  :type     => :string,
+  :desc     => "Sign the Release file when uploading a package," +
+    "or when verifying it after removing a package." +
+    "Use --sign with your key ID to use a specific key."
 
   class_option :gpg_options,
-    :default => "",
-    :type    => :string,
-    :desc    => "Additional command line options to pass to GPG when signing"
+  :default => "",
+  :type    => :string,
+  :desc    => "Additional command line options to pass to GPG when signing"
 
   desc "upload FILES",
-    "Uploads the given files to a S3 bucket as an APT repository."
+  "Uploads the given files to a S3 bucket as an APT repository."
 
   option :arch,
-    :type     => :string,
-    :aliases  => "-a",
-    :desc     => "The architecture of the package in the APT repository."
+  :type     => :string,
+  :aliases  => "-a",
+  :desc     => "The architecture of the package in the APT repository."
 
   option :preserve_versions,
-    :default  => false,
-    :type     => :boolean,
-    :aliases  => "-p",
-    :desc     => "Whether to preserve other versions of a package " +
-                 "in the repository when uploading one."
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-p",
+  :desc     => "Whether to preserve other versions of a package " +
+    "in the repository when uploading one."
 
   def upload(*files)
     component = options[:component]
@@ -135,10 +141,10 @@ class Deb::S3::CLI < Thor
   desc "verify", "Verifies that the files in the package manifests exist"
 
   option :fix_manifests,
-    :default  => false,
-    :type     => :boolean,
-    :aliases  => "-f",
-    :desc     => "Whether to fix problems in manifests when verifying."
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-f",
+  :desc     => "Whether to fix problems in manifests when verifying."
 
   def verify
     component = options[:component]
@@ -195,30 +201,78 @@ class Deb::S3::CLI < Thor
   end
 
   def access_key
-    if options[:access_key] == "$AMAZON_ACCESS_KEY_ID"
-      ENV["AMAZON_ACCESS_KEY_ID"]
+    if explicit?
+      explicit_access_key
     else
-      options[:access_key]
+      role_access_key
     end
   end
 
   def secret_key
-    if options[:secret_key] == "$AMAZON_SECRET_ACCESS_KEY"
-      ENV["AMAZON_SECRET_ACCESS_KEY"]
+    if explicit?
+      explicit_secret_key
     else
-      options[:secret_key]
+      role_secret_key
     end
   end
 
+  def security_token
+    unless explicit?
+      role_security_token
+    end
+  end
+
+  def explicit_access_key
+    options[:access_key] || ENV[AMAZON_ACCESS_KEY_ID]
+  end
+
+  def explicit_secret_key
+    options[:secret_key] || ENV[AMAZON_SECRET_ACCESS_KEY]
+  end
+
+  def explicit?
+    if explicit_access_key.nil? ^ explicit_secret_key.nil?
+      error("The access and secret keys are both required for S3. Please specify them both.")
+    end
+    !explicit_access_key.nil? && !explicit_secret_key.nil?
+  end
+
+  def role
+    unless @role
+      @role = Net::HTTP.get(HOST, PATH)
+    end
+    @role
+  end
+
+  def role_credentials
+    unless @creds
+      creds = Net::HTTP.get(HOST, "#{PATH}#{role}/")
+      @creds = JSON.parse(creds)
+    end
+    @creds
+  end
+
+  def role_access_key
+    role_credentials["AccessKeyId"]
+  end
+
+  def role_secret_key
+    role_credentials["SecretAccessKey"]
+  end
+
+  def role_security_token
+    role_credentials["Token"]
+  end
+
   def configure_s3_client
-    error("No access key given for S3. Please specify one.") unless access_key
-    error("No secret access key given for S3. Please specify one.") unless secret_key
     error("No value provided for required options '--bucket'") unless options[:bucket]
 
-    AWS::S3::Base.establish_connection!(
+    connection_options = {
       :access_key_id     => access_key,
       :secret_access_key => secret_key
-    )
+    }
+    connection_options[:security_token] = security_token if security_token
+    AWS::S3::Base.establish_connection!(connection_options)
 
     AWS::S3::DEFAULT_HOST.replace options[:endpoint] if options[:endpoint]
 
@@ -227,7 +281,8 @@ class Deb::S3::CLI < Thor
     Deb::S3::Utils.gpg_options = options[:gpg_options]
 
     # make sure we have a valid visibility setting
-    Deb::S3::Utils.access_policy = case options[:visibility]
+  Deb::S3::Utils.access_policy =
+    case options[:visibility]
     when "public"
       :public_read
     when "private"
