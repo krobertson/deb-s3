@@ -132,6 +132,49 @@ class Deb::S3::CLI < Thor
     log("Update complete.")
   end
 
+  desc "delete PACKAGE VERSION",
+    "Remove the package named PACKAGE of version specifically equal to VERSION."
+
+  option :arch,
+    :type     => :string,
+    :aliases  => "-a",
+    :desc     => "The architecture of the package in the APT repository."
+
+
+  def delete(package, version)
+    component = options[:component]
+    if options[:section]
+      component = options[:section]
+      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
+    end
+
+    if package.nil? || version.empty?
+      error("You must specify both the package and its version.")
+    end
+    arch = options[:arch]
+    if arch.nil?
+      error("You must specify the architecture of the package to remove.")
+    end
+
+    configure_s3_client
+
+    # retrieve the existing manifests
+    log("Retrieving existing manifests")
+    release  = Deb::S3::Release.retrieve(options[:codename])
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch])
+
+    log("Deleting #{package} version #{version}")
+    manifest.del(package, version)
+
+    log("Uploading new manifests to S3")
+    manifest.write_to_s3 {|f| sublog("Transferring #{f}") }
+    release.update_manifest(manifest)
+    release.write_to_s3 {|f| sublog("Transferring #{f}") }
+
+    log("Update complete.")
+  end
+
+
   desc "verify", "Verifies that the files in the package manifests exist"
 
   option :fix_manifests,

@@ -55,6 +55,10 @@ class Deb::S3::Manifest
     pkg
   end
 
+  def del(pkg, version)
+    @packages.delete_if { |p| p.name == pkg && p.version == version }
+  end
+
   def generate
     @packages.collect { |pkg| pkg.generate }.join("\n")
   end
