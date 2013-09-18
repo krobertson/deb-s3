@@ -1,8 +1,8 @@
-require "json"
-require "net/http"
-
-require "aws/s3"
+require "aws"
 require "thor"
+
+# Hack: aws requires this!
+require "json"
 
 require "deb/s3"
 require "deb/s3/utils"
@@ -11,12 +11,6 @@ require "deb/s3/package"
 require "deb/s3/release"
 
 class Deb::S3::CLI < Thor
-  AMAZON_ACCESS_KEY_ID     = "AMAZON_ACCESS_KEY_ID"
-  AMAZON_SECRET_ACCESS_KEY = "AMAZON_SECRET_ACCESS_KEY"
-
-  constant :HOST, "169.254.169.254"
-  constant :PATH, "/latest/meta-data/iam/security-credentials/"
-
   class_option :bucket,
   :type     => :string,
   :aliases  => "-b",
@@ -39,17 +33,13 @@ class Deb::S3::CLI < Thor
   :aliases  => "-s",
   :hide     => true
 
-  class_option :access_key,
+  class_option :access_key_id,
   :type     => :string,
   :desc     => "The access key for connecting to S3."
 
-  class_option :secret_key,
+  class_option :secret_access_key,
   :type     => :string,
   :desc     => "The secret key for connecting to S3."
-
-  class_option :endpoint,
-  :type     => :string,
-  :desc     => "The region endpoint for connecting to S3."
 
   class_option :visibility,
   :default  => "public",
@@ -158,7 +148,7 @@ class Deb::S3::CLI < Thor
     log("Retrieving existing manifests")
     release = Deb::S3::Release.retrieve(options[:codename])
 
-    %w[i386 amd64 all].each do |arch|
+    %w[amd64 armel i386 all].each do |arch|
       log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
       manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
       missing_packages = []
@@ -200,97 +190,40 @@ class Deb::S3::CLI < Thor
     exit 1
   end
 
-  def access_key
-    if explicit?
-      explicit_access_key
-    else
-      role_access_key
+  def provider
+    access_key_id     = options[:access_key_id]
+    secret_access_key = options[:secret_access_key]
+
+    if access_key_id.nil? ^ secret_access_key.nil?
+      error("If you specify of --access_key_id or --secret_access_key, you must specify the other.")
     end
-  end
 
-  def secret_key
-    if explicit?
-      explicit_secret_key
-    else
-      role_secret_key
-    end
-  end
+    static_credentials = {}
+    static_credentials[:access_key_id]     = access_key_id     if access_key_id
+    static_credentials[:secret_access_key] = secret_access_key if secret_access_key
 
-  def security_token
-    unless explicit?
-      role_security_token
-    end
-  end
-
-  def explicit_access_key
-    options[:access_key] || ENV[AMAZON_ACCESS_KEY_ID]
-  end
-
-  def explicit_secret_key
-    options[:secret_key] || ENV[AMAZON_SECRET_ACCESS_KEY]
-  end
-
-  def explicit?
-    if explicit_access_key.nil? ^ explicit_secret_key.nil?
-      error("The access and secret keys are both required for S3. Please specify them both.")
-    end
-    !explicit_access_key.nil? && !explicit_secret_key.nil?
-  end
-
-  def role
-    unless @role
-      @role = Net::HTTP.get(HOST, PATH)
-    end
-    @role
-  end
-
-  def role_credentials
-    unless @creds
-      creds = Net::HTTP.get(HOST, "#{PATH}#{role}/")
-      @creds = JSON.parse(creds)
-    end
-    @creds
-  end
-
-  def role_access_key
-    role_credentials["AccessKeyId"]
-  end
-
-  def role_secret_key
-    role_credentials["SecretAccessKey"]
-  end
-
-  def role_security_token
-    role_credentials["Token"]
+    AWS::Core::CredentialProviders::DefaultProvider.new(static_credentials)
   end
 
   def configure_s3_client
     error("No value provided for required options '--bucket'") unless options[:bucket]
 
-    connection_options = {
-      :access_key_id     => access_key,
-      :secret_access_key => secret_key
-    }
-    connection_options[:security_token] = security_token if security_token
-    AWS::S3::Base.establish_connection!(connection_options)
-
-    AWS::S3::DEFAULT_HOST.replace options[:endpoint] if options[:endpoint]
-
+    Deb::S3::Utils.s3          = AWS::S3.new(provider.credentials)
     Deb::S3::Utils.bucket      = options[:bucket]
     Deb::S3::Utils.signing_key = options[:sign]
     Deb::S3::Utils.gpg_options = options[:gpg_options]
 
     # make sure we have a valid visibility setting
-  Deb::S3::Utils.access_policy =
-    case options[:visibility]
-    when "public"
-      :public_read
-    when "private"
-      :private
-    when "authenticated"
-      :authenticated_read
-    else
-      error("Invalid visibility setting given. Can be public, private, or authenticated.")
-    end
+    Deb::S3::Utils.access_policy =
+      case options[:visibility]
+      when "public"
+        :public_read
+      when "private"
+        :private
+      when "authenticated"
+        :authenticated_read
+      else
+        error("Invalid visibility setting given. Can be public, private, or authenticated.")
+      end
   end
 end
