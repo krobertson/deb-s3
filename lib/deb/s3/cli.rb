@@ -195,7 +195,7 @@ class Deb::S3::CLI < Thor
     secret_access_key = options[:secret_access_key]
 
     if access_key_id.nil? ^ secret_access_key.nil?
-      error("If you specify of --access_key_id or --secret_access_key, you must specify the other.")
+      error("If you specify one of --access-key-id or --secret-access-key, you must specify the other.")
     end
 
     static_credentials = {}
