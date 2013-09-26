@@ -53,7 +53,7 @@ module Deb::S3::Utils
   def s3_store(path, filename=nil)
     filename = File.basename(path) unless filename
     File.open(path) do |file|
-      o = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[path]
+      o = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[filename]
       o.write(file)
       o.acl = Deb::S3::Utils.access_policy
     end
