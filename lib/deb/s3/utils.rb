@@ -3,6 +3,8 @@ require "tmpdir"
 
 module Deb::S3::Utils
   module_function
+  def s3; @s3 end
+  def s3= v; @s3 = v end
   def bucket; @bucket end
   def bucket= v; @bucket = v end
   def access_policy; @access_policy end
@@ -40,27 +42,24 @@ module Deb::S3::Utils
   end
 
   def s3_exists?(path)
-    AWS::S3::S3Object.exists?(path, Deb::S3::Utils.bucket)
+    Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[path].exists?
   end
 
   def s3_read(path)
     return nil unless s3_exists?(path)
-    s = ""
-    AWS::S3::S3Object.stream(path, Deb::S3::Utils.bucket) do |chunk|
-      s += chunk
-    end
-    s
+    Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[path].read
   end
 
   def s3_store(path, filename=nil)
     filename = File.basename(path) unless filename
     File.open(path) do |file|
-      AWS::S3::S3Object.store(filename, file,
-        Deb::S3::Utils.bucket, :access => Deb::S3::Utils.access_policy)
+      o = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[filename]
+      o.write(file)
+      o.acl = Deb::S3::Utils.access_policy
     end
   end
 
   def s3_remove(path)
-    AWS::S3::S3Object.delete(path, Deb::S3::Utils.bucket) if s3_exists?(path)
+    Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[path].delete if s3_exists?(path)
   end
 end

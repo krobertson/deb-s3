@@ -59,21 +59,18 @@ Usage:
   deb-s3 upload FILES
 
 Options:
-  -a, [--arch=ARCH]              # The architecture of the package in the APT repository.
-      [--sign=SIGN]              # Sign the Release file. Use --sign with your key ID to use a specific key.
-  -p, [--preserve-versions]      # Whether to preserve other versions of a package in the repository when uploading one.
-  -b, [--bucket=BUCKET]          # The name of the S3 bucket to upload to.
-  -c, [--codename=CODENAME]      # The codename of the APT repository.
-                                 # Default: stable
-  -m, [--component=COMPONENT]    # The component of the APT repository.
-                                 # Default: main
-      [--access-key=ACCESS_KEY]  # The access key for connecting to S3.
-                                 # Default: $AMAZON_ACCESS_KEY_ID
-      [--secret-key=SECRET_KEY]  # The secret key for connecting to S3.
-                                 # Default: $AMAZON_SECRET_ACCESS_KEY
-      [--endpoint=ENDPOINT]      # The region endpoint for connecting to S3.
-  -v, [--visibility=VISIBILITY]  # The access policy for the uploaded files. Can be public, private, or authenticated.
-                                 # Default: public
+  -a, [--arch=ARCH]                     # The architecture of the package in the APT repository.
+      [--sign=SIGN]                     # Sign the Release file. Use --sign with your key ID to use a specific key.
+  -p, [--preserve-versions]             # Whether to preserve other versions of a package in the repository when uploading one.
+  -b, [--bucket=BUCKET]                 # The name of the S3 bucket to upload to.
+  -c, [--codename=CODENAME]             # The codename of the APT repository.
+                                        # Default: stable
+  -m, [--component=COMPONENT]           # The component of the APT repository.
+                                        # Default: main
+      [--access-key-id=ACCESS_KEY]      # The access key for connecting to S3.
+      [--secret-access-key=SECRET_KEY]  # The secret key for connecting to S3.
+  -v, [--visibility=VISIBILITY]         # The access policy for the uploaded files. Can be public, private, or authenticated.
+                                        # Default: public
 
 Uploads the given files to a S3 bucket as an APT repository.
 ```
@@ -93,20 +90,17 @@ Usage:
   deb-s3 verify
 
 Options:
-  -f, [--fix-manifests]          # Whether to fix problems in manifests when verifying.
-      [--sign=SIGN]              # Sign the Release file. Use --sign with your key ID to use a specific key.
-  -b, [--bucket=BUCKET]          # The name of the S3 bucket to upload to.
-  -c, [--codename=CODENAME]      # The codename of the APT repository.
-                                 # Default: stable
-  -m, [--component=COMPONENT]    # The component of the APT repository.
-                                 # Default: main
-      [--access-key=ACCESS_KEY]  # The access key for connecting to S3.
-                                 # Default: $AMAZON_ACCESS_KEY_ID
-      [--secret-key=SECRET_KEY]  # The secret key for connecting to S3.
-                                 # Default: $AMAZON_SECRET_ACCESS_KEY
-      [--endpoint=ENDPOINT]      # The region endpoint for connecting to S3.
-  -v, [--visibility=VISIBILITY]  # The access policy for the uploaded files. Can be public, private, or authenticated.
-                                 # Default: public
+  -f, [--fix-manifests]                 # Whether to fix problems in manifests when verifying.
+      [--sign=SIGN]                     # Sign the Release file. Use --sign with your key ID to use a specific key.
+  -b, [--bucket=BUCKET]                 # The name of the S3 bucket to upload to.
+  -c, [--codename=CODENAME]             # The codename of the APT repository.
+                                        # Default: stable
+  -m, [--component=COMPONENT]           # The component of the APT repository.
+                                        # Default: main
+      [--access-key-id=ACCESS_KEY]      # The access key for connecting to S3.
+      [--secret-access-key=SECRET_KEY]  # The secret key for connecting to S3.
+  -v, [--visibility=VISIBILITY]         # The access policy for the uploaded files. Can be public, private, or authenticated.
+                                        # Default: public
 
 Verifies that the files in the package manifests exist
 ```
