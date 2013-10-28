@@ -16,6 +16,10 @@ class Deb::S3::CLI < Thor
   :aliases  => "-b",
   :desc     => "The name of the S3 bucket to upload to."
 
+  class_option :prefix,
+  :type     => :string,
+  :desc     => "The path prefix to use when storing on S3."
+
   class_option :codename,
   :default  => "stable",
   :type     => :string,
@@ -212,6 +216,7 @@ class Deb::S3::CLI < Thor
     Deb::S3::Utils.bucket      = options[:bucket]
     Deb::S3::Utils.signing_key = options[:sign]
     Deb::S3::Utils.gpg_options = options[:gpg_options]
+    Deb::S3::Utils.prefix      = options[:prefix]
 
     # make sure we have a valid visibility setting
     Deb::S3::Utils.access_policy =
