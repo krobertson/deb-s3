@@ -11,7 +11,7 @@ Depends: <%= dependencies.collect { |d| fix_dependency(d) }.flatten.join(", ") %
 <% if !conflicts.empty? -%>
 Conflicts: <%= conflicts.join(", ") %>
 <% end -%>
-<% if attributes[:deb_pre_depends_given?] -%>
+<% if attributes[:deb_pre_depends] -%>
 Pre-Depends: <%= attributes[:deb_pre_depends].collect { |d| fix_dependency(d) }.flatten.join(", ") %>
 <% end -%>
 <% if !provides.empty? -%>
@@ -22,14 +22,14 @@ Provides: <%= provides.map {|p| p.split(" ").first}.join ", " %>
 <% if !replaces.empty? -%>
 Replaces: <%= replaces.join(", ") %>
 <% end -%>
-<% if attributes[:deb_recommends_given?] -%>
+<% if attributes[:deb_recommends] -%>
 Recommends: <%= attributes[:deb_recommends].collect { |d| fix_dependency(d) }.flatten.join(", ") %>
 <% end -%>
-<% if attributes[:deb_suggests_given?] -%>
+<% if attributes[:deb_suggests] -%>
 Suggests: <%= attributes[:deb_suggests].collect { |d| fix_dependency(d) }.flatten.join(", ") %>
 <% end -%>
 Section: <%= category %>
-<% if attributes[:deb_origin_given?] -%>
+<% if attributes[:deb_origin] -%>
 Origin: <%= attributes[:deb_origin] %>
 <% end -%>
 Priority: <%= attributes[:deb_priority] %>
@@ -53,7 +53,7 @@ Description: <%= firstline %>
 <% if remainder.any? -%>
 <%= remainder.collect { |l| l =~ /^ *$/ ? " ." : " #{l}" }.join("\n") %>
 <% end -%>
-<% if attributes[:deb_field_given?] -%>
+<% if attributes[:deb_field] -%>
 <%   attributes[:deb_field].each do |field, value| -%>
 <%= field %>: <%= value %>
 <%   end -%>
