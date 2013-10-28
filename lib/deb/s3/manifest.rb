@@ -55,6 +55,22 @@ class Deb::S3::Manifest
     pkg
   end
 
+  def delete_package(pkg, versions=nil)
+    deleted = []
+    new_packages = @packages.select { |p|
+        # Include packages we didn't name
+        if p.name != pkg
+           p
+        # Also include the packages not matching a specified version
+        elsif (!versions.nil? and p.name == pkg and !versions.include? p.version)
+            p
+        end
+    }
+    deleted = @packages - new_packages
+    @packages = new_packages
+    deleted
+  end
+
   def generate
     @packages.collect { |pkg| pkg.generate }.join("\n")
   end

@@ -75,6 +75,23 @@ Options:
 Uploads the given files to a S3 bucket as an APT repository.
 ```
 
+You can also delete packages from the APT repository. Please keep in mind that
+this does NOT delete the .deb file itself, it only removes it from the list of
+packages in the specified component, codename and architecture.
+
+Now to delete the package:
+```console
+$ deb-s3 delete --arch amd64 --bucket my-bucket --versions 1.0.0 my-deb-package
+>> Retrieving existing manifests
+   -- Deleting my-deb-package version 1.0.0
+>> Uploading new manifests to S3
+   -- Transferring dists/stable/main/binary-amd64/Packages
+   -- Transferring dists/stable/main/binary-amd64/Packages.gz
+   -- Transferring dists/stable/Release
+>> Update complete.
+
+````
+
 You can also verify an existing APT repository on S3 using the `verify` command:
 
 ```console
