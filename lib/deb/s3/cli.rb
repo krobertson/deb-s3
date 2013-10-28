@@ -45,6 +45,11 @@ class Deb::S3::CLI < Thor
   :type     => :string,
   :desc     => "The secret key for connecting to S3."
 
+  class_option :endpoint,
+  :type     => :string,
+  :desc     => "The region endpoint for connecting to S3.",
+  :default  => "s3.amazonaws.com"
+
   class_option :visibility,
   :default  => "public",
   :type     => :string,
@@ -281,7 +286,10 @@ class Deb::S3::CLI < Thor
   def configure_s3_client
     error("No value provided for required options '--bucket'") unless options[:bucket]
 
-    Deb::S3::Utils.s3          = AWS::S3.new(provider.credentials)
+    settings = { :s3_endpoint => options[:endpoint] }
+    settings.merge!(provider.credentials)
+
+    Deb::S3::Utils.s3          = AWS::S3.new(settings)
     Deb::S3::Utils.bucket      = options[:bucket]
     Deb::S3::Utils.signing_key = options[:sign]
     Deb::S3::Utils.gpg_options = options[:gpg_options]

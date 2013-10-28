@@ -1,3 +1,5 @@
+require "base64"
+require "digest/md5"
 require "erb"
 require "tmpdir"
 
@@ -58,11 +60,16 @@ module Deb::S3::Utils
 
   def s3_store(path, filename=nil)
     filename = File.basename(path) unless filename
-    File.open(path) do |file|
-      o = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(filename)]
-      o.write(file)
-      o.acl = Deb::S3::Utils.access_policy
+    obj = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(filename)]
+
+    # check if the object already exists
+    if obj.exists?
+      file_md5 = Digest::MD5.file(path)
+      return if file_md5.to_s == obj.etag.gsub('"', '')
     end
+
+    # upload the file
+    obj.write(Pathname.new(path), :acl => Deb::S3::Utils.access_policy)
   end
 
   def s3_remove(path)

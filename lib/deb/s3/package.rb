@@ -214,7 +214,7 @@ class Deb::S3::Package
 
   # from fpm
   def extract_info(control)
-    parse = lambda do |field| 
+    parse = lambda do |field|
       value = control[/^#{field}: .*/]
       if value.nil?
         return nil
@@ -239,6 +239,7 @@ class Deb::S3::Package
     self.url = parse.call("Homepage")
     self.vendor = parse.call("Vendor") || self.vendor
     self.attributes[:deb_priority] = parse.call("Priority")
+    self.attributes[:deb_origin] = parse.call("Origin")
     self.attributes[:deb_installed_size] = parse.call("Installed-Size")
 
     # Packages manifest fields

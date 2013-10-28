@@ -29,6 +29,9 @@ Recommends: <%= attributes[:deb_recommends].collect { |d| fix_dependency(d) }.fl
 Suggests: <%= attributes[:deb_suggests].collect { |d| fix_dependency(d) }.flatten.join(", ") %>
 <% end -%>
 Section: <%= category %>
+<% if attributes[:deb_origin_given?] -%>
+Origin: <%= attributes[:deb_origin] %>
+<% end -%>
 Priority: <%= attributes[:deb_priority] %>
 Homepage: <%= url or "http://nourlgiven.example.com/" %>
 Filename: <%= url_filename_encoded %>
