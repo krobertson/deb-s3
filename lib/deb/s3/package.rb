@@ -73,7 +73,7 @@ class Deb::S3::Package
         end
 
         Dir.mktmpdir do |path|
-          safesystem("#{extract_control_tarball_cmd} | tar -zxf - -C #{path}")
+          safesystem("#{extract_control_tarball_cmd} | tar -zxf - -C #{path} control")
           File.read(File.join(path, "control"))
         end
       end
