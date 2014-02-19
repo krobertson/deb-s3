@@ -58,7 +58,7 @@ module Deb::S3::Utils
     Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(path)].read
   end
 
-  def s3_store(path, filename=nil)
+  def s3_store(path, filename=nil, content_type='application/octet-stream; charset=binary')
     filename = File.basename(path) unless filename
     obj = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(filename)]
 
@@ -69,7 +69,7 @@ module Deb::S3::Utils
     end
 
     # upload the file
-    obj.write(Pathname.new(path), :acl => Deb::S3::Utils.access_policy)
+    obj.write(Pathname.new(path), :acl => Deb::S3::Utils.access_policy, :content_type => content_type)
   end
 
   def s3_remove(path)
