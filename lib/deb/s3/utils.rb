@@ -18,10 +18,12 @@ module Deb::S3::Utils
   def prefix; @prefix end
   def prefix= v; @prefix = v end
 
+  class SafeSystemError < RuntimeError; end
+
   def safesystem(*args)
     success = system(*args)
     if !success
-      raise "'system(#{args.inspect})' failed with error code: #{$?.exitstatus}"
+      raise SafeSystemError, "'system(#{args.inspect})' failed with error code: #{$?.exitstatus}"
     end
     return success
   end

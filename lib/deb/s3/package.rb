@@ -60,8 +60,20 @@ class Deb::S3::Package
       if system("which dpkg 2>&1 >/dev/null")
         `dpkg -f #{package}`
       else
+        # ar fails to find the control.tar.gz tarball within the .deb
+        # on Mac OS. Try using ar to list the control file, if found,
+        # use ar to extract, otherwise attempt with tar which works on OS X.
+        extract_control_tarball_cmd = "ar p #{package} control.tar.gz"
+
+        begin
+          safesystem("ar t #{package} control.tar.gz")
+        rescue SafeSystemError
+          warn "Failed to find control data in .deb with ar, trying tar."
+          extract_control_tarball_cmd = "tar zxf #{package} --to-stdout control.tar.gz"
+        end
+
         Dir.mktmpdir do |path|
-          safesystem("ar p #{package} control.tar.gz | tar -zxf - -C #{path}")
+          safesystem("#{extract_control_tarball_cmd} | tar -zxf - -C #{path} control")
           File.read(File.join(path, "control"))
         end
       end
