@@ -86,7 +86,7 @@ class Deb::S3::Release
     release_tmp.puts self.generate
     release_tmp.close
     yield self.filename if block_given?
-    s3_store(release_tmp.path, self.filename)
+    s3_store(release_tmp.path, self.filename, 'text/plain; charset=us-ascii')
 
     # sign the file, if necessary
     if Deb::S3::Utils.signing_key
@@ -96,7 +96,7 @@ class Deb::S3::Release
         remote_file = self.filename+".gpg"
         yield remote_file if block_given?
         raise "Unable to locate Release signature file" unless File.exists?(local_file)
-        s3_store(local_file, remote_file)
+        s3_store(local_file, remote_file, 'application/pgp-signature; charset=us-ascii')
         File.unlink(local_file)
       else
         raise "Signing the Release file failed."

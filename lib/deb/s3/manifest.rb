@@ -82,7 +82,7 @@ class Deb::S3::Manifest
     @packages.each do |pkg|
       if pkg.needs_uploading?
         yield pkg.url_filename if block_given?
-        s3_store(pkg.filename, pkg.url_filename)
+        s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary')
       end
     end
 
@@ -92,7 +92,7 @@ class Deb::S3::Manifest
     pkgs_temp.close
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages"
     yield f if block_given?
-    s3_store(pkgs_temp.path, f)
+    s3_store(pkgs_temp.path, f, 'text/plain; charset=us-ascii')
     @files["#{@component}/binary-#{@architecture}/Packages"] = hashfile(pkgs_temp.path)
     pkgs_temp.unlink
 
@@ -102,7 +102,7 @@ class Deb::S3::Manifest
     Zlib::GzipWriter.open(gztemp.path) { |gz| gz.write manifest }
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages.gz"
     yield f if block_given?
-    s3_store(gztemp.path, f)
+    s3_store(gztemp.path, f, 'application/x-gzip; charset=binary')
     @files["#{@component}/binary-#{@architecture}/Packages.gz"] = hashfile(gztemp.path)
     gztemp.unlink
 
