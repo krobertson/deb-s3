@@ -57,7 +57,7 @@ class Deb::S3::Package
     end
 
     def extract_control(package)
-      if system("which dpkg 2>&1 >/dev/null")
+      if system("which dpkg &> /dev/null")
         `dpkg -f #{package}`
       else
         # ar fails to find the control.tar.gz tarball within the .deb
