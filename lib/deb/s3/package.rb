@@ -66,14 +66,14 @@ class Deb::S3::Package
         extract_control_tarball_cmd = "ar p #{package} control.tar.gz"
 
         begin
-          safesystem("ar t #{package} control.tar.gz")
+          safesystem("ar t #{package} control.tar.gz &> /dev/null")
         rescue SafeSystemError
           warn "Failed to find control data in .deb with ar, trying tar."
           extract_control_tarball_cmd = "tar zxf #{package} --to-stdout control.tar.gz"
         end
 
         Dir.mktmpdir do |path|
-          safesystem("#{extract_control_tarball_cmd} | tar -zxf - -C #{path} control")
+          safesystem("#{extract_control_tarball_cmd} | tar -zxf - -C #{path}")
           File.read(File.join(path, "control"))
         end
       end
