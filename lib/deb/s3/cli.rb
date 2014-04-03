@@ -95,7 +95,7 @@ class Deb::S3::CLI < Thor
     end
 
     # make sure all the files exists
-    if missing_file = files.detect { |f| !File.exists?(f) }
+    if missing_file = files.find { |pattern| Dir.glob(pattern).empty? }
       error("File '#{missing_file}' doesn't exist")
     end
 
