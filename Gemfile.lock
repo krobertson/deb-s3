@@ -15,6 +15,7 @@ GEM
     json (1.8.1)
     minitest (5.0.8)
     nokogiri (1.5.10)
+    rake (10.1.1)
     thor (0.18.1)
     uuidtools (2.1.4)
 
@@ -24,3 +25,4 @@ PLATFORMS
 DEPENDENCIES
   deb-s3!
   minitest
+  rake

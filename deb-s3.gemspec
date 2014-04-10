@@ -17,4 +17,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency "thor",    "~> 0.18.0"
   gem.add_dependency "aws-sdk", "~> 1.18"
   gem.add_development_dependency "minitest"
+  gem.add_development_dependency "rake"
 end
