@@ -3,6 +3,7 @@ require "digest/sha2"
 require "digest/md5"
 require "socket"
 require "tmpdir"
+require 'deb/s3/utils'
 
 class Deb::S3::Package
   include Deb::S3::Utils
@@ -121,6 +122,11 @@ class Deb::S3::Package
     @dependencies = []
 
     @needs_uploading = false
+  end
+
+  def full_version
+    return nil if [epoch, version, iteration].all?(&:nil?)
+    [[epoch, version].compact.join(":"), iteration].compact.join("-")
   end
 
   def filename=(f)
