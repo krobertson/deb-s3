@@ -1,0 +1,18 @@
+Package: discourse
+Version: 0.9.8.3-1396474125.12e4179.wheezy
+License: unknown
+Vendor: @ba8d89490f8f
+Architecture: amd64
+Maintainer: <@ba8d89490f8f>
+Installed-Size: 264979
+Depends: mysql-common, libpq5, libsqlite3-0, openssl, libxml2, libxslt1.1, libreadline5, libreadline6, libssl1.0.0, libmysqlclient18, libevent-2.0-5, libevent-core-2.0-5, libevent-extra-2.0-5
+Provides: discourse
+Section: default
+Priority: extra
+Homepage: http://www.discourse.org
+Filename: pool/d/di/discourse_0.9.8.3-1396474125.12e4179.wheezy_amd64.deb
+Size: 85733514
+SHA1: 919b7b7860ed0f5850d031072c00a64c6f41657a
+SHA256: ab79c879c498086b62289da77d770725939acababcbcd8d8af5cf46e1971fd0e
+MD5sum: 11aa00eeb849212667d81ce1904daa4d
+Description: A platform for community discussion. Free, open, simple.

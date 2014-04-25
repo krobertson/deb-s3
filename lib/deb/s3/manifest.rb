@@ -1,5 +1,7 @@
 require "tempfile"
 require "zlib"
+require 'deb/s3/utils'
+require 'deb/s3/package'
 
 class Deb::S3::Manifest
   include Deb::S3::Utils
@@ -9,6 +11,8 @@ class Deb::S3::Manifest
   attr_accessor :architecture
 
   attr_accessor :files
+
+  attr_reader :packages
 
   def initialize
     @packages = []
@@ -41,17 +45,13 @@ class Deb::S3::Manifest
     end
   end
 
-  def packages
-    @packages
-  end
-
   def add(pkg, preserve_versions)
     if preserve_versions
-      @packages.delete_if { |p| p.name == pkg.name && p.version == pkg.version }
+      packages.delete_if { |p| p.name == pkg.name && p.full_version == pkg.full_version }
     else
-      @packages.delete_if { |p| p.name == pkg.name }
+      packages.delete_if { |p| p.name == pkg.name }
     end
-    @packages << pkg
+    packages << pkg
     pkg
   end
 
