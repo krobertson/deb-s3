@@ -123,14 +123,6 @@ class Deb::S3::Package
     @needs_uploading = false
   end
 
-  def version_string
-    parts = []
-    parts << "#{@epoch}:" if @epoch
-    parts << "#{@version}"
-    parts << "-#{@iteration}" if @iteration
-    return parts.join("")
-  end
-
   def filename=(f)
     @filename = f
     @needs_uploading = true
