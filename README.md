@@ -1,5 +1,7 @@
 # deb-s3
 
+[![Build Status](https://travis-ci.org/krobertson/deb-s3.svg?branch=master)](https://travis-ci.org/krobertson/deb-s3)
+
 `deb-s3` is a simple utility to make creating and managing APT repositories on
 S3.
 
