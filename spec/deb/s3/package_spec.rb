@@ -19,24 +19,24 @@ describe Deb::S3::Package do
     end
 
     it "returns only the version if no epoch and no iteration" do
-      package = create_package version: "0.9.8"
+      package = create_package :version => "0.9.8"
       package.full_version.must_equal "0.9.8"
     end
 
     it "returns epoch:version if epoch and version" do
       epoch = Time.now.to_i
-      package = create_package version: "0.9.8", epoch: epoch
+      package = create_package :version => "0.9.8", :epoch => epoch
       package.full_version.must_equal "#{epoch}:0.9.8"
     end
 
     it "returns version-iteration if version and iteration" do
-      package = create_package version: "0.9.8", iteration: "2"
+      package = create_package :version => "0.9.8", :iteration => "2"
       package.full_version.must_equal "0.9.8-2"
     end
 
     it "returns epoch:version-iteration if epoch and version and iteration" do
       epoch = Time.now.to_i
-      package = create_package version: "0.9.8", iteration: "2", epoch: epoch
+      package = create_package :version => "0.9.8", :iteration => "2", :epoch => epoch
       package.full_version.must_equal "#{epoch}:0.9.8-2"
     end
   end
