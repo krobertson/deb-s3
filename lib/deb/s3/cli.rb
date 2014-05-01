@@ -50,6 +50,15 @@ class Deb::S3::CLI < Thor
   :desc     => "The region endpoint for connecting to S3.",
   :default  => "s3.amazonaws.com"
 
+  class_option :proxy_uri,
+  :type     => :string,
+  :desc     => "The URI of the proxy to send service requests through."
+
+  class_option :use_ssl,
+  :default  => true,
+  :type     => :boolean,
+  :desc     => "Whether to use HTTP or HTTPS for request transport."
+
   class_option :visibility,
   :default  => "public",
   :type     => :string,
@@ -286,7 +295,11 @@ class Deb::S3::CLI < Thor
   def configure_s3_client
     error("No value provided for required options '--bucket'") unless options[:bucket]
 
-    settings = { :s3_endpoint => options[:endpoint] }
+    settings = {
+      :s3_endpoint => options[:endpoint],
+      :proxy_uri   => options[:proxy_uri],
+      :use_ssl     => options[:use_ssl]
+    }
     settings.merge!(provider.credentials)
 
     Deb::S3::Utils.s3          = AWS::S3.new(settings)
