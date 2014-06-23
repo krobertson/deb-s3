@@ -64,14 +64,15 @@ module Deb::S3::Utils
     filename = File.basename(path) unless filename
     obj = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(filename)]
 
+    file_md5 = Digest::MD5.file(path)
+
     # check if the object already exists
     if obj.exists?
-      file_md5 = Digest::MD5.file(path)
-      return if file_md5.to_s == obj.etag.gsub('"', '')
+      return if (file_md5.to_s == obj.etag.gsub('"', '') or file_md5.to_s == obj.metadata['md5'])
     end
 
     # upload the file
-    obj.write(Pathname.new(path), :acl => Deb::S3::Utils.access_policy, :content_type => content_type)
+    obj.write(Pathname.new(path), :acl => Deb::S3::Utils.access_policy, :content_type => content_type, :metadata => {'md5' => file_md5})
   end
 
   def s3_remove(path)
