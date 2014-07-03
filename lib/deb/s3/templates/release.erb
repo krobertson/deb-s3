@@ -3,14 +3,14 @@ Date: <%= Time.now.utc.strftime("%a, %d %b %Y %T %Z") %>
 Architectures: <%= architectures.join(" ") %>
 Components: <%= components.join(" ") %>
 MD5Sum:
-<% files.each do |f,p| -%>
+<% files.sort.each do |f,p| -%>
  <%= p[:md5] %> <%= p[:size].to_s.rjust(16) %> <%= f %>
 <% end -%>
 SHA1:
-<% files.each do |f,p| -%>
+<% files.sort.each do |f,p| -%>
  <%= p[:sha1] %> <%= p[:size].to_s.rjust(16) %> <%= f %>
 <% end -%>
 SHA256:
-<% files.each do |f,p| -%>
+<% files.sort.each do |f,p| -%>
  <%= p[:sha256] %> <%= p[:size].to_s.rjust(16) %> <%= f %>
 <% end -%>
