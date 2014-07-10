@@ -77,6 +77,12 @@ class Deb::S3::CLI < Thor
   :type    => :string,
   :desc    => "Additional command line options to pass to GPG when signing"
 
+  class_option :encryption,
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-e",
+  :desc     => "Use S3 server side encryption"
+
   desc "upload FILES",
   "Uploads the given files to a S3 bucket as an APT repository."
 
@@ -307,6 +313,7 @@ class Deb::S3::CLI < Thor
     Deb::S3::Utils.signing_key = options[:sign]
     Deb::S3::Utils.gpg_options = options[:gpg_options]
     Deb::S3::Utils.prefix      = options[:prefix]
+    Deb::S3::Utils.encryption  = options[:encryption]
 
     # make sure we have a valid visibility setting
     Deb::S3::Utils.access_policy =
