@@ -17,6 +17,8 @@ module Deb::S3::Utils
   def gpg_options= v; @gpg_options = v end
   def prefix; @prefix end
   def prefix= v; @prefix = v end
+  def encryption; @encryption end
+  def encryption= v; @encryption = v end
 
   class SafeSystemError < RuntimeError; end
 
@@ -71,8 +73,12 @@ module Deb::S3::Utils
       return if (file_md5.to_s == obj.etag.gsub('"', '') or file_md5.to_s == obj.metadata['md5'])
     end
 
+    # specify if encryption is required
+    options = {:acl => Deb::S3::Utils.access_policy, :content_type => content_type, :metadata => {'md5' => file_md5}}
+    options[:server_side_encryption] = :aes256 if Deb::S3::Utils.encryption
+
     # upload the file
-    obj.write(Pathname.new(path), :acl => Deb::S3::Utils.access_policy, :content_type => content_type, :metadata => {'md5' => file_md5})
+    obj.write(Pathname.new(path), options)
   end
 
   def s3_remove(path)
