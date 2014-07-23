@@ -3,6 +3,8 @@ require "digest/sha2"
 require "digest/md5"
 require "socket"
 require "tmpdir"
+require "uri"
+
 require 'deb/s3/utils'
 
 class Deb::S3::Package
@@ -254,7 +256,8 @@ class Deb::S3::Package
     self.attributes[:deb_installed_size] = parse.call("Installed-Size")
 
     # Packages manifest fields
-    self.url_filename = parse.call("Filename")
+    filename = parse.call("Filename")
+    self.url_filename = filename && URI.unescape(filename)
     self.sha1 = parse.call("SHA1")
     self.sha256 = parse.call("SHA256")
     self.md5 = parse.call("MD5sum")
