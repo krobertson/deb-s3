@@ -22,7 +22,7 @@ With `deb-s3`, there is no need for this. `deb-s3` features:
 * Updates it with the new package, replacing the existing entry if already
   there or adding a new one if not.
 * Uploads the package itself, the Packages manifest, and the Packages.gz
-  manifest.
+  manifest. It will skip the uploading if the package is already there.
 * Updates the Release file with the new hashes and file sizes.
 
 ## Getting Started
@@ -126,6 +126,4 @@ Verifies that the files in the package manifests exist
 
 ## TODO
 
-This is still experimental.  These are several things to be done:
-
-* Don't re-upload a package if it already exists and has the same hashes.
+This is still experimental. There are several things to be done.
