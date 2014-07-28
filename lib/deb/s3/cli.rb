@@ -256,7 +256,7 @@ class Deb::S3::CLI < Thor
         end
       end
 
-      if options[:fix_manifests] && !missing_packages.empty?
+      if options[:sign] || (options[:fix_manifests] && !missing_packages.empty?)
         log("Removing #{missing_packages.length} package(s) from the manifest...")
         missing_packages.each { |p| manifest.packages.delete(p) }
         manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
