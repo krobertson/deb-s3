@@ -1,3 +1,4 @@
+# -*- encoding : utf-8 -*-
 require "tempfile"
 require "zlib"
 require 'deb/s3/utils'

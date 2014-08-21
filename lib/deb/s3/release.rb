@@ -1,3 +1,4 @@
+# -*- encoding : utf-8 -*-
 require "tempfile"
 
 class Deb::S3::Release
