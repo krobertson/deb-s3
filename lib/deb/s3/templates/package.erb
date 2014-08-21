@@ -8,25 +8,31 @@ Installed-Size: <%= attributes[:deb_installed_size] %>
 <% if !dependencies.empty? and !attributes[:no_depends?] -%>
 Depends: <%= dependencies.collect { |d| fix_dependency(d) }.flatten.join(", ") %>
 <% end -%>
-<% if !conflicts.empty? -%>
-Conflicts: <%= conflicts.join(", ") %>
+<% if attributes[:deb_conflicts] -%>
+Conflicts: <%= attributes[:deb_conflicts] %>
+<% end -%>
+<% if attributes[:deb_breaks] -%>
+Breaks: <%= attributes[:deb_breaks] %>
 <% end -%>
 <% if attributes[:deb_pre_depends] -%>
-Pre-Depends: <%= attributes[:deb_pre_depends].collect { |d| fix_dependency(d) }.flatten.join(", ") %>
+Pre-Depends: <%= attributes[:deb_pre_depends] %>
 <% end -%>
-<% if !provides.empty? -%>
+<% if attributes[:deb_provides] -%>
 <%# Turn each provides from 'foo = 123' to simply 'foo' because Debian :\ -%>
 <%#  http://www.debian.org/doc/debian-policy/ch-relationships.html -%>
-Provides: <%= provides.map {|p| p.split(" ").first}.join ", " %>
+Provides: <%= attributes[:deb_provides] %>
 <% end -%>
-<% if !replaces.empty? -%>
-Replaces: <%= replaces.join(", ") %>
+<% if attributes[:deb_replaces] -%>
+Replaces: <%= attributes[:deb_replaces] %>
 <% end -%>
 <% if attributes[:deb_recommends] -%>
-Recommends: <%= attributes[:deb_recommends].collect { |d| fix_dependency(d) }.flatten.join(", ") %>
+Recommends: <%= attributes[:deb_recommends] %>
 <% end -%>
 <% if attributes[:deb_suggests] -%>
-Suggests: <%= attributes[:deb_suggests].collect { |d| fix_dependency(d) }.flatten.join(", ") %>
+Suggests: <%= attributes[:deb_suggests] %>
+<% end -%>
+<% if attributes[:deb_enhances] -%>
+Enhances: <%= attributes[:deb_enhances] %>
 <% end -%>
 Section: <%= category %>
 <% if attributes[:deb_origin] -%>
