@@ -121,6 +121,11 @@ class Deb::S3::CLI < Thor
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename])
     manifests = {}
+    release.architectures.each do |arch|
+      manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+    end
+
+    packages_arch_all = []
 
     # examine all the files
     files.collect { |f| Dir.glob(f) }.flatten.each do |file|
@@ -137,8 +142,20 @@ class Deb::S3::CLI < Thor
       # retrieve the manifest for the arch if we don't have it already
       manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch)
 
-      # add in the package
+      # add package in manifests
       manifests[arch].add(pkg, options[:preserve_versions])
+
+      # If arch is all, we must add this package in all arch available
+      if arch == 'all'
+        packages_arch_all << pkg
+      end
+    end
+
+    manifests.each do |arch, manifest|
+      next if arch == 'all'
+      packages_arch_all.each do |pkg|
+        manifest.add(pkg, options[:preserve_versions], false)
+      end
     end
 
     # upload the manifest

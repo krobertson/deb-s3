@@ -120,8 +120,6 @@ class Deb::S3::Package
     @conflicts = []
     @replaces = []
     @dependencies = []
-
-    @needs_uploading = false
   end
 
   def full_version
@@ -131,7 +129,6 @@ class Deb::S3::Package
 
   def filename=(f)
     @filename = f
-    @needs_uploading = true
     @filename
   end
 
@@ -141,10 +138,6 @@ class Deb::S3::Package
 
   def url_filename_encoded
     @url_filename || "pool/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
-  end
-
-  def needs_uploading?
-    @needs_uploading
   end
 
   def generate

@@ -13,9 +13,11 @@ class Deb::S3::Manifest
   attr_accessor :files
 
   attr_reader :packages
+  attr_reader :packages_to_be_upload
 
   def initialize
     @packages = []
+    @packages_to_be_upload = []
     @component = nil
     @architecture = nil
     @files = {}
@@ -45,13 +47,14 @@ class Deb::S3::Manifest
     end
   end
 
-  def add(pkg, preserve_versions)
+  def add(pkg, preserve_versions, needs_uploading=true)
     if preserve_versions
       packages.delete_if { |p| p.name == pkg.name && p.full_version == pkg.full_version }
     else
       packages.delete_if { |p| p.name == pkg.name }
     end
     packages << pkg
+    packages_to_be_upload << pkg if needs_uploading
     pkg
   end
 
@@ -79,11 +82,9 @@ class Deb::S3::Manifest
     manifest = self.generate
 
     # store any packages that need to be stored
-    @packages.each do |pkg|
-      if pkg.needs_uploading?
-        yield pkg.url_filename if block_given?
-        s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary')
-      end
+    @packages_to_be_upload.each do |pkg|
+      yield pkg.url_filename if block_given?
+      s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary')
     end
 
     # generate the Packages file
