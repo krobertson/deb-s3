@@ -20,6 +20,11 @@ class Deb::S3::CLI < Thor
   :type     => :string,
   :desc     => "The path prefix to use when storing on S3."
 
+  class_option :origin,
+  :type     => :string,
+  :aliases  => "-o",
+  :desc     => "The origin to use in the repository Release file."
+
   class_option :codename,
   :default  => "stable",
   :type     => :string,
@@ -119,7 +124,7 @@ class Deb::S3::CLI < Thor
 
     # retrieve the existing manifests
     log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename])
+    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin])
     manifests = {}
     release.architectures.each do |arch|
       manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
