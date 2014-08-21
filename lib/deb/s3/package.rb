@@ -23,11 +23,6 @@ class Deb::S3::Package
   attr_accessor :description
 
   attr_accessor :dependencies
-  attr_accessor :provides
-  attr_accessor :conflicts
-  attr_accessor :replaces
-  attr_accessor :excludes
-
 
   # Any other attributes specific to this package.
   # This is where you'd put rpm, deb, or other specific attributes.
@@ -118,9 +113,6 @@ class Deb::S3::Package
     @filename = nil
     @url_filename = nil
 
-    @provides = []
-    @conflicts = []
-    @replaces = []
     @dependencies = []
   end
 
@@ -274,9 +266,16 @@ class Deb::S3::Package
     #self.config_files = config_files
 
     self.dependencies += Array(parse_depends(parse.call("Depends")))
-    self.conflicts += Array(parse_depends(parse.call("Conflicts")))
-    self.provides += Array(parse_depends(parse.call("Provides")))
-    self.replaces += Array(parse_depends(parse.call("Replaces")))
+
+    self.attributes[:deb_recommends] = parse.call('Recommends')
+    self.attributes[:deb_suggests]   = parse.call('Suggests')
+    self.attributes[:deb_enhances]   = parse.call('Enhances')
+    self.attributes[:deb_pre_depends] = parse.call('Pre-Depends')
+
+    self.attributes[:deb_breaks]    = parse.call('Breaks')
+    self.attributes[:deb_conflicts] = parse.call("Conflicts")
+    self.attributes[:deb_provides]  = parse.call("Provides")
+    self.attributes[:deb_replaces]  = parse.call("Replaces")
   end # def extract_info
 
   def apply_file_info(file)
