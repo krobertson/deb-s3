@@ -22,7 +22,7 @@ class Deb::S3::Release
   end
 
   class << self
-    def retrieve(codename, origin)
+    def retrieve(codename, origin = nil)
       if s = Deb::S3::Utils.s3_read("dists/#{codename}/Release")
         self.parse_release(s)
       else
