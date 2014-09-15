@@ -105,12 +105,6 @@ class Deb::S3::CLI < Thor
     "in the repository when uploading one."
 
   def upload(*files)
-    component = options[:component]
-    if options[:section]
-      component = options[:section]
-      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
-    end
-
     if files.nil? || files.empty?
       error("You must specify at least one file to upload")
     end
@@ -186,6 +180,78 @@ class Deb::S3::CLI < Thor
     log("Update complete.")
   end
 
+  desc "copy PACKAGE TO_CODENAME TO_COMPONENT ",
+    "Copy the package named PACKAGE to given codename and component. If --versions is not specified, copy all versions of PACKAGE. Otherwise, only the specified versions will be copied. Source codename and component is given by --codename and --component options."
+
+  option :arch,
+    :type     => :string,
+    :aliases  => "-a",
+    :desc     => "The architecture of the package in the APT repository."
+
+  option :versions,
+    :default  => nil,
+    :type     => :array,
+    :desc     => "The space-delimited versions of PACKAGE to delete. If not" +
+    "specified, ALL VERSIONS will be deleted. Fair warning." +
+    "E.g. --versions \"0.1 0.2 0.3\""
+
+  option :preserve_versions,
+    :default  => false,
+    :type     => :boolean,
+    :aliases  => "-p",
+    :desc     => "Whether to preserve other versions of a package " +
+    "in the repository when uploading one."
+
+  def copy(package_name, to_codename, to_component)
+    if package_name.nil?
+      error "You must specify a package name."
+    end
+    if to_codename.nil?
+      error "You must specify a codename to copy to."
+    end
+    if to_component.nil?
+      error "You must specify a component to copy to."
+    end
+
+    arch = options[:arch]
+    if arch.nil?
+      error "You must specify the architecture of the package to copy."
+    end
+
+    versions = options[:versions]
+    if versions.nil?
+      warn "===> WARNING: Copying all versions of #{package_name}"
+    else
+      log "Versions to copy: #{versions.join(', ')}"
+    end
+
+    configure_s3_client
+
+    # retrieve the existing manifests
+    log "Retrieving existing manifests"
+    from_manifest = Deb::S3::Manifest.retrieve(options[:codename],
+                                               component, arch)
+    to_release = Deb::S3::Release.retrieve(to_codename)
+    to_manifest = Deb::S3::Manifest.retrieve(to_codename, to_component, arch)
+    packages = from_manifest.packages.select { |p|
+      p.name == package_name &&
+        (versions.nil? || versions.include?(p.full_version))
+    }
+    if packages.size == 0
+      error "No packages found in repository."
+    end
+
+    packages.each do |package|
+      to_manifest.add package, options[:preserve_versions], false
+    end
+
+    to_manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+    to_release.update_manifest(to_manifest)
+    to_release.write_to_s3 { |f| sublog("Transferring #{f}") }
+
+    log "Copy complete."
+  end
+
   desc "delete PACKAGE",
     "Remove the package named PACKAGE. If --versions is not specified, delete" +
     "all versions of PACKAGE. Otherwise, only the specified versions will be " +
@@ -204,12 +270,6 @@ class Deb::S3::CLI < Thor
     "E.g. --versions \"0.1 0.2 0.3\""
 
   def delete(package)
-    component = options[:component]
-    if options[:section]
-      component = options[:section]
-      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
-    end
-
     if package.nil?
       error("You must specify a package name.")
     end
@@ -264,12 +324,6 @@ class Deb::S3::CLI < Thor
   :desc     => "Whether to fix problems in manifests when verifying."
 
   def verify
-    component = options[:component]
-    if options[:section]
-      component = options[:section]
-      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
-    end
-
     configure_s3_client
 
     log("Retrieving existing manifests")
@@ -303,6 +357,17 @@ class Deb::S3::CLI < Thor
   end
 
   private
+
+  def component
+    return @component if @component
+    @component = if (section = options[:section])
+                   warn("===> WARNING: The --section/-s argument is " \
+                        "deprecated, please use --component/-m.")
+                   section
+                 else
+                   options[:component]
+                 end
+  end
 
   def log(message)
     puts ">> #{message}"
