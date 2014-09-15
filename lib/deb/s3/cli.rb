@@ -89,6 +89,11 @@ class Deb::S3::CLI < Thor
   :aliases  => "-e",
   :desc     => "Use S3 server side encryption"
 
+  class_option :quiet,
+  :type => :boolean,
+  :aliases => "-q",
+  :desc => "Doesn't output information, just returns status appropriately."
+
   desc "upload FILES",
   "Uploads the given files to a S3 bucket as an APT repository."
 
@@ -206,8 +211,35 @@ class Deb::S3::CLI < Thor
     }.flatten(1)
 
     rows.each do |row|
-      puts "% -#{widths[0]}s  % -#{widths[1]}s  %s" % row
+      $stdout.puts "% -#{widths[0]}s  % -#{widths[1]}s  %s" % row
     end
+  end
+
+  desc "show PACKAGE VERSION ARCH", "Shows information about a package."
+
+  def show(package_name, version, arch)
+    if version.nil?
+      error "You must specify the name of the package to show."
+    end
+    if version.nil?
+      error "You must specify the version of the package to show."
+    end
+    if arch.nil?
+      error "You must specify the architecture of the package to show."
+    end
+
+    configure_s3_client
+
+    # retrieve the existing manifests
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+    package = manifest.packages.detect { |p|
+      p.name == package_name && p.full_version == version
+    }
+    if package.nil?
+      error "No such package found."
+    end
+
+    puts package.generate
   end
 
   desc "copy PACKAGE TO_CODENAME TO_COMPONENT ",
@@ -399,16 +431,20 @@ class Deb::S3::CLI < Thor
                  end
   end
 
+  def puts(*args)
+    $stdout.puts(*args) unless options[:quiet]
+  end
+
   def log(message)
-    puts ">> #{message}"
+    puts ">> #{message}" unless options[:quiet]
   end
 
   def sublog(message)
-    puts "   -- #{message}"
+    puts "   -- #{message}" unless options[:quiet]
   end
 
   def error(message)
-    puts "!! #{message}"
+    $stderr.puts "!! #{message}" unless options[:quiet]
     exit 1
   end
 
