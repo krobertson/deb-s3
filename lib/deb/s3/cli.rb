@@ -180,6 +180,36 @@ class Deb::S3::CLI < Thor
     log("Update complete.")
   end
 
+  desc "list", "Lists packages in given codename, component, and optionally architecture"
+
+  option :arch,
+  :type     => :string,
+  :aliases  => "-a",
+  :desc     => "The architecture of the package in the APT repository."
+
+  def list
+    configure_s3_client
+
+    release = Deb::S3::Release.retrieve(options[:codename])
+    archs = release.architectures
+    archs &= [options[:arch]] if options[:arch] && options[:arch] != "all"
+    widths = [0, 0]
+    rows = archs.map { |arch|
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+      manifest.packages.map do |package|
+        [package.name, package.full_version, package.architecture].tap do |row|
+          row.each_with_index do |col, i|
+            widths[i] = [widths[i], col.size].max if widths[i]
+          end
+        end
+      end
+    }.flatten(1)
+
+    rows.each do |row|
+      puts "% -#{widths[0]}s  % -#{widths[1]}s  %s" % row
+    end
+  end
+
   desc "copy PACKAGE TO_CODENAME TO_COMPONENT ",
     "Copy the package named PACKAGE to given codename and component. If --versions is not specified, copy all versions of PACKAGE. Otherwise, only the specified versions will be copied. Source codename and component is given by --codename and --component options."
 
