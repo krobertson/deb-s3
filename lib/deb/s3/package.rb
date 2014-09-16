@@ -220,63 +220,52 @@ class Deb::S3::Package
 
   # from fpm
   def extract_info(control)
-    parse = lambda do |field|
-      value = control[/^#{field}: .*/]
-      if value.nil?
-        return nil
-      else
-        return value.split(": ",2).last
-      end
-    end
+    fields = parse_control(control)
 
     # Parse 'epoch:version-iteration' in the version string
-    version_re = /^(?:([0-9]+):)?(.+?)(?:-(.*))?$/
-    m = version_re.match(parse.call("Version"))
-    if !m
-      raise "Unsupported version string '#{parse.call("Version")}'"
+    full_version = fields.delete('Version')
+    if full_version !~ /^(?:([0-9]+):)?(.+?)(?:-(.*))?$/
+      raise "Unsupported version string '#{full_version}'"
     end
-    self.epoch, self.version, self.iteration = m.captures
+    self.epoch, self.version, self.iteration = $~.captures
 
-    self.architecture = parse.call("Architecture")
-    self.category = parse.call("Section")
-    self.license = parse.call("License") || self.license
-    self.maintainer = parse.call("Maintainer")
-    self.name = parse.call("Package")
-    self.url = parse.call("Homepage")
-    self.vendor = parse.call("Vendor") || self.vendor
-    self.attributes[:deb_priority] = parse.call("Priority")
-    self.attributes[:deb_origin] = parse.call("Origin")
-    self.attributes[:deb_installed_size] = parse.call("Installed-Size")
+    self.architecture = fields.delete('Architecture')
+    self.category = fields.delete('Section')
+    self.license = fields.delete('License') || self.license
+    self.maintainer = fields.delete('Maintainer')
+    self.name = fields.delete('Package')
+    self.url = fields.delete('Homepage')
+    self.vendor = fields.delete('Vendor') || self.vendor
+    self.attributes[:deb_priority] = fields.delete('Priority')
+    self.attributes[:deb_origin] = fields.delete('Origin')
+    self.attributes[:deb_installed_size] = fields.delete('Installed-Size')
 
     # Packages manifest fields
-    filename = parse.call("Filename")
+    filename = fields.delete('Filename')
     self.url_filename = filename && URI.unescape(filename)
-    self.sha1 = parse.call("SHA1")
-    self.sha256 = parse.call("SHA256")
-    self.md5 = parse.call("MD5sum")
-    self.size = parse.call("Size")
-
-    # The description field is a special flower, parse it that way.
-    # The description is the first line as a normal Description field, but also continues
-    # on future lines indented by one space, until the end of the file. Blank
-    # lines are marked as ' .'
-    description = control[/^Description: .*[^\Z]/m]
-    description = description.gsub(/^[^(Description|\s)].*$/, "").split(": ", 2).last
-    self.description = description.gsub(/^ /, "").gsub(/^\.$/, "")
+    self.sha1 = fields.delete('SHA1')
+    self.sha256 = fields.delete('SHA256')
+    self.md5 = fields.delete('MD5sum')
+    self.size = fields.delete('Size')
+    self.description = fields.delete('Description')
 
     #self.config_files = config_files
 
-    self.dependencies += Array(parse_depends(parse.call("Depends")))
+    self.dependencies += Array(parse_depends(fields.delete('Depends')))
 
-    self.attributes[:deb_recommends] = parse.call('Recommends')
-    self.attributes[:deb_suggests]   = parse.call('Suggests')
-    self.attributes[:deb_enhances]   = parse.call('Enhances')
-    self.attributes[:deb_pre_depends] = parse.call('Pre-Depends')
+    self.attributes[:deb_recommends] = fields.delete('Recommends')
+    self.attributes[:deb_suggests]   = fields.delete('Suggests')
+    self.attributes[:deb_enhances]   = fields.delete('Enhances')
+    self.attributes[:deb_pre_depends] = fields.delete('Pre-Depends')
 
-    self.attributes[:deb_breaks]    = parse.call('Breaks')
-    self.attributes[:deb_conflicts] = parse.call("Conflicts")
-    self.attributes[:deb_provides]  = parse.call("Provides")
-    self.attributes[:deb_replaces]  = parse.call("Replaces")
+    self.attributes[:deb_breaks]    = fields.delete('Breaks')
+    self.attributes[:deb_conflicts] = fields.delete('Conflicts')
+    self.attributes[:deb_provides]  = fields.delete('Provides')
+    self.attributes[:deb_replaces]  = fields.delete('Replaces')
+
+    self.attributes[:deb_field] = Hash[fields.map { |k, v|
+      [k.sub(/\AX[BCS]{0,3}-/, ''), v]
+    }]
   end # def extract_info
 
   def apply_file_info(file)
@@ -284,5 +273,29 @@ class Deb::S3::Package
     self.sha1 = Digest::SHA1.file(file).hexdigest
     self.sha256 = Digest::SHA2.file(file).hexdigest
     self.md5 = Digest::MD5.file(file).hexdigest
+  end
+
+  def parse_control(control)
+    field = nil
+    value = ""
+    {}.tap do |fields|
+      control.each_line do |line|
+        if line =~ /^(\s+)(\S.*)$/
+          indent, rest = $1, $2
+          # Continuation
+          if indent.size == 1 && rest == "."
+            value << "\n\n"
+            rest = ""
+          elsif value.size > 0
+            value << "\n"
+          end
+          value << rest
+        elsif line =~ /^([-\w]+):(.*)$/
+          fields[field] = value if field
+          field, value = $1, $2.strip
+        end
+      end
+      fields[field] = value if field
+    end
   end
 end
