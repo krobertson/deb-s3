@@ -187,6 +187,12 @@ class Deb::S3::CLI < Thor
 
   desc "list", "Lists packages in given codename, component, and optionally architecture"
 
+  option :long,
+  :type     => :boolean,
+  :aliases  => '-l',
+  :desc     => "Shows all package information in original format",
+  :default  => false
+
   option :arch,
   :type     => :string,
   :aliases  => "-a",
@@ -202,16 +208,24 @@ class Deb::S3::CLI < Thor
     rows = archs.map { |arch|
       manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
       manifest.packages.map do |package|
-        [package.name, package.full_version, package.architecture].tap do |row|
-          row.each_with_index do |col, i|
-            widths[i] = [widths[i], col.size].max if widths[i]
+        if options[:long]
+          package.generate
+        else
+          [package.name, package.full_version, package.architecture].tap do |row|
+            row.each_with_index do |col, i|
+              widths[i] = [widths[i], col.size].max if widths[i]
+            end
           end
         end
       end
     }.flatten(1)
 
-    rows.each do |row|
-      $stdout.puts "% -#{widths[0]}s  % -#{widths[1]}s  %s" % row
+    if options[:long]
+      $stdout.puts rows.join("\n")
+    else
+      rows.each do |row|
+        $stdout.puts "% -#{widths[0]}s  % -#{widths[1]}s  %s" % row
+      end
     end
   end
 
