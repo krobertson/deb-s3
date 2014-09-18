@@ -137,6 +137,7 @@ class Deb::S3::CLI < Thor
     files.collect { |f| Dir.glob(f) }.flatten.each do |file|
       log("Examining package file #{File.basename(file)}")
       pkg = Deb::S3::Package.parse_file(file)
+      pkg.url_filename = "pool/#{options[:codename]}/#{pkg.name[0]}/#{pkg.name[0..1]}/#{File.basename(pkg.filename)}"
 
       # copy over some options if they weren't given
       arch = options[:arch] || pkg.architecture
@@ -231,25 +232,24 @@ class Deb::S3::CLI < Thor
     # retrieve the existing manifests
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch])
 
-    deleted = manifest.delete_package(package, versions)
-    if deleted.length == 0
-        if versions.nil?
-            error("No packages were deleted. #{package} not found.")
-        else
-            error("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found.")
-        end
-    else
-        deleted.each { |p|
-            sublog("Deleting #{p.name} version #{p.version}")
-        }
+    manifests = {}
+    release.architectures.each do |arch|
+      manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
     end
 
-    log("Uploading new manifests to S3")
-    manifest.write_to_s3 {|f| sublog("Transferring #{f}") }
-    release.update_manifest(manifest)
-    release.write_to_s3 {|f| sublog("Transferring #{f}") }
+    if options[:arch] == "all"
+      manifests.each do |arch, manifest|
+        delete_package(manifest, package, versions)
+        release.update_manifest(manifest)
+        release.write_to_s3 {|f| sublog("Transferring #{f}")}
+      end
+    else
+      manifest = manifests[options[:arch]]
+      delete_package(manifest, package, versions)
+      release.update_manifest(manifest)
+      release.write_to_s3 {|f| sublog("Transferring #{f}") }
+    end
 
     log("Update complete.")
   end
@@ -361,5 +361,21 @@ class Deb::S3::CLI < Thor
       else
         error("Invalid visibility setting given. Can be public, private, or authenticated.")
       end
+  end
+
+  def delete_package(manifest, package, versions)
+    deleted = manifest.delete_package(package, versions)
+    if deleted.length == 0
+        if versions.nil?
+            error("No packages were deleted. #{package} not found.")
+        else
+            error("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found.")
+        end
+    else
+        deleted.each { |p| sublog("Deleting #{p.name} version #{p.version}") }
+    end
+
+    log("Uploading new manifests to S3")
+    manifest.write_to_s3 {|f| sublog("Transferring #{f}") }
   end
 end
