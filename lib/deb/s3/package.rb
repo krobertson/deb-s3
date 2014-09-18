@@ -30,22 +30,24 @@ class Deb::S3::Package
   attr_accessor :attributes
 
   # hashes
-  attr_accessor :url_filename
   attr_accessor :sha1
   attr_accessor :sha256
   attr_accessor :md5
   attr_accessor :size
 
   attr_accessor :filename
+  attr_accessor :file
+
+  attr_accessor :codename
 
   class << self
     include Deb::S3::Utils
 
-    def parse_file(package)
+    def parse_file(file)
       p = self.new
-      p.extract_info(extract_control(package))
-      p.apply_file_info(package)
-      p.filename = package
+      p.extract_info(extract_control(file))
+      p.apply_file_info(file)
+      p.file = file
       p
     end
 
@@ -56,7 +58,7 @@ class Deb::S3::Package
     end
 
     def extract_control(package)
-      if system("which dpkg &> /dev/null")
+      if system("which dpkg > /dev/null 2>&1")
         `dpkg -f #{package}`
       else
         # ar fails to find the control.tar.gz tarball within the .deb
@@ -79,8 +81,8 @@ class Deb::S3::Package
     end
   end
 
-  def initialize
-    @attributes = {}
+  def initialize(opt = {})
+    @attributes = opt[:attributes] || {}
 
     # Reference
     # http://www.debian.org/doc/manuals/maint-guide/first.en.html
@@ -97,42 +99,29 @@ class Deb::S3::Package
       @maintainer = "<#{ENV["USER"]}@#{Socket.gethostname}>"
     end
 
-    @name = nil
-    @architecture = "native"
-    @description = "no description given"
-    @version = nil
-    @epoch = nil
-    @iteration = nil
-    @url = nil
-    @category = "default"
-    @license = "unknown"
-    @vendor = "none"
-    @sha1 = nil
-    @sha256 = nil
-    @md5 = nil
-    @size = nil
-    @filename = nil
-    @url_filename = nil
-
-    @dependencies = []
+    @name = opt[:name]
+    @architecture = opt[:architexture] || "native"
+    @description = opt[:description] || "no description given"
+    @version = opt[:version]
+    @epoch = opt[:epoch]
+    @iteration = opt[:iteration]
+    @url = opt[:url]
+    @category = opt[:category] || "default"
+    @license = opt[:license] || "unknown"
+    @vendor = opt[:vendor] || "none"
+    @sha1 = opt[:sha1]
+    @sha256 = opt[:sha256]
+    @md5 = opt[:md5]
+    @size = opt[:size]
+    @filename = opt[:filename]
+    @codename = opt[:codename]
+    @dependencies = opt[:dependencies] || []
+    @file = opt[:file]
   end
 
   def full_version
     return nil if [epoch, version, iteration].all?(&:nil?)
     [[epoch, version].compact.join(":"), iteration].compact.join("-")
-  end
-
-  def filename=(f)
-    @filename = f
-    @filename
-  end
-
-  def url_filename
-    @url_filename || "pool/#{self.name[0]}/#{self.name[0..1]}/#{File.basename(self.filename)}"
-  end
-
-  def url_filename_encoded
-    @url_filename || "pool/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
   end
 
   def generate
@@ -235,26 +224,25 @@ class Deb::S3::Package
     if !m
       raise "Unsupported version string '#{parse.call("Version")}'"
     end
-    self.epoch, self.version, self.iteration = m.captures
+    epoch, self.version, self.iteration = m.captures
 
-    self.architecture = parse.call("Architecture")
-    self.category = parse.call("Section")
-    self.license = parse.call("License") || self.license
-    self.maintainer = parse.call("Maintainer")
-    self.name = parse.call("Package")
-    self.url = parse.call("Homepage")
-    self.vendor = parse.call("Vendor") || self.vendor
-    self.attributes[:deb_priority] = parse.call("Priority")
-    self.attributes[:deb_origin] = parse.call("Origin")
-    self.attributes[:deb_installed_size] = parse.call("Installed-Size")
+    @architecture = parse.call("Architecture")
+    @category = parse.call("Section")
+    @license = parse.call("License") || self.license
+    @maintainer = parse.call("Maintainer")
+    @name = parse.call("Package")
+    @url = parse.call("Homepage")
+    @vendor ||= parse.call("Vendor")
+    @attributes[:deb_priority] = parse.call("Priority")
+    @attributes[:deb_origin] = parse.call("Origin")
+    @attributes[:deb_installed_size] = parse.call("Installed-Size")
 
     # Packages manifest fields
-    filename = parse.call("Filename")
-    self.url_filename = filename && URI.unescape(filename)
-    self.sha1 = parse.call("SHA1")
-    self.sha256 = parse.call("SHA256")
-    self.md5 = parse.call("MD5sum")
-    self.size = parse.call("Size")
+    @filename = parse.call("Filename") && URI.unescape(parse.call("Filename"))
+    @sha1 = parse.call("SHA1")
+    @sha256 = parse.call("SHA256")
+    @md5 = parse.call("MD5sum")
+    @size = parse.call("Size")
 
     # The description field is a special flower, parse it that way.
     # The description is the first line as a normal Description field, but also continues
@@ -262,27 +250,42 @@ class Deb::S3::Package
     # lines are marked as ' .'
     description = control[/^Description: .*[^\Z]/m]
     description = description.gsub(/^[^(Description|\s)].*$/, "").split(": ", 2).last
-    self.description = description.gsub(/^ /, "").gsub(/^\.$/, "")
+    @description = description.gsub(/^ /, "").gsub(/^\.$/, "")
 
     #self.config_files = config_files
 
-    self.dependencies += Array(parse_depends(parse.call("Depends")))
+    @dependencies += Array(parse_depends(parse.call("Depends")))
 
-    self.attributes[:deb_recommends] = parse.call('Recommends')
-    self.attributes[:deb_suggests]   = parse.call('Suggests')
-    self.attributes[:deb_enhances]   = parse.call('Enhances')
-    self.attributes[:deb_pre_depends] = parse.call('Pre-Depends')
+    @attributes[:deb_recommends] = parse.call('Recommends')
+    @attributes[:deb_suggests]   = parse.call('Suggests')
+    @attributes[:deb_enhances]   = parse.call('Enhances')
+    @attributes[:deb_pre_depends] = parse.call('Pre-Depends')
 
-    self.attributes[:deb_breaks]    = parse.call('Breaks')
-    self.attributes[:deb_conflicts] = parse.call("Conflicts")
-    self.attributes[:deb_provides]  = parse.call("Provides")
-    self.attributes[:deb_replaces]  = parse.call("Replaces")
+    @attributes[:deb_breaks]    = parse.call('Breaks')
+    @attributes[:deb_conflicts] = parse.call("Conflicts")
+    @attributes[:deb_provides]  = parse.call("Provides")
+    @attributes[:deb_replaces]  = parse.call("Replaces")
   end # def extract_info
 
   def apply_file_info(file)
-    self.size = File.size(file)
-    self.sha1 = Digest::SHA1.file(file).hexdigest
-    self.sha256 = Digest::SHA2.file(file).hexdigest
-    self.md5 = Digest::MD5.file(file).hexdigest
+    @size = File.size(file)
+    @sha1 = Digest::SHA1.file(file).hexdigest
+    @sha256 = Digest::SHA2.file(file).hexdigest
+    @md5 = Digest::MD5.file(file).hexdigest
+  end
+
+  def hash
+    [self.class, @name, @full_version].hash
+  end
+
+  def eql?(other)
+    self.class == other.class &&
+    name == other.name &&
+    full_version == other.full_version
+  end
+  alias_method :==, :eql?
+
+  def to_s
+    "#{@name}_#{full_version}"
   end
 end

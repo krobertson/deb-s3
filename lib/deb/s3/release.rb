@@ -1,5 +1,8 @@
 # -*- encoding : utf-8 -*-
 require "tempfile"
+require 'set'
+require 'deb/s3/log'
+require 'deb/s3/utils'
 
 class Deb::S3::Release
   include Deb::S3::Utils
@@ -12,13 +15,19 @@ class Deb::S3::Release
   attr_accessor :files
   attr_accessor :policy
 
+  attr_accessor :manifests
+  attr_reader   :packages
+
   def initialize
     @origin = nil
     @codename = nil
-    @architectures = []
-    @components = []
+    @architectures = Set.new ['amd64', 'i386']
+    @components = Set.new
     @files = {}
     @policy = :public_read
+    @manifests = Set.new
+    @packages = Set.new
+    @pending = { :upload => Set.new, :remove => Set.new, :manifests => Set.new }
   end
 
   class << self
@@ -55,11 +64,16 @@ class Deb::S3::Release
     end
 
     # grab basic fields
-    self.codename = parse.call("Codename")
-    self.origin = parse.call("Origin") || nil
-    self.architectures = (parse.call("Architectures") || "").split(/\s+/)
-    self.components = (parse.call("Components") || "").split(/\s+/)
+    @codename = parse.call("Codename")
+    @origin = parse.call("Origin") || nil
+    @architectures = (parse.call("Architectures") || "").split(/\s+/)
+    @components = (parse.call("Components") || "").split(/\s+/)
 
+    architectures.each do |a|
+      components.each do |c|
+        add_manifest(a, c)
+      end
+    end
     # find all the hashes
     str.scan(/^\s+([^\s]+)\s+(\d+)\s+(.+)$/).each do |(hash,size,name)|
       self.files[name] ||= { :size => size.to_i }
@@ -79,12 +93,10 @@ class Deb::S3::Release
   end
 
   def write_to_s3
-    # validate some other files are present
-    if block_given?
-      self.validate_others { |f| yield f }
-    else
-      self.validate_others
-    end
+    remove_package_s3
+    upload_package_s3
+
+    @pending[:manifests].each { |m| m.write_to_s3 }
 
     # generate the Release file
     release_tmp = Tempfile.new("Release")
@@ -114,31 +126,81 @@ class Deb::S3::Release
     release_tmp.unlink
   end
 
-  def update_manifest(manifest)
-    self.components << manifest.component unless self.components.include?(manifest.component)
-    self.architectures << manifest.architecture unless self.architectures.include?(manifest.architecture)
-    self.files.merge!(manifest.files)
+  def add_manifest(arch, component)
+    manifest = Deb::S3::Manifest.new(codename, component, arch)
+    m = manifests.find { |man| man == manifest }
+    unless m
+      m = manifest
+      Log.log.debug("Adding Manifest #{m}")
+      components << manifest.component
+      architectures << manifest.architecture
+      files.merge(manifest.files)
+      @packages.merge(manifest.parse_packages)
+      @manifests << manifest
+    end
+    m
   end
 
-  def validate_others
-    to_apply = []
-    self.components.each do |comp|
-      %w(amd64 i386).each do |arch|
-        next if self.files.has_key?("#{comp}/binary-#{arch}/Packages")
-
-        m = Deb::S3::Manifest.new
-        m.codename = self.codename
-        m.component = comp
-        m.architecture = arch
-        if block_given?
-          m.write_to_s3 { |f| yield f }
-        else
-          m.write_to_s3
-        end
-        to_apply << m
-      end
+  def add_package(package, manifest)
+    Log.log.debug("Add #{package.name}:#{package.full_version} to #{manifest}")
+    if package.architecture == 'all'
+      mans = manifests_same_component(manifest)
+    else
+      mans = [manifest]
     end
+    mans.each do |m|
+      m.packages << package
+      @pending[:manifests] << m
+    end
+    @pending[:upload] << package
+    @pending[:manifests] << manifest
+  end
 
-    to_apply.each { |m| self.update_manifest(m) }
+  def delete_package(package_name, manifest, versions = [])
+    Log.log.debug("Remove #{package_name}:#{versions} from #{manifest}")
+    if manifest.architecture == 'all'
+      mans = manifests_same_component(manifest)
+    else
+      mans = [manifest]
+    end
+    packages_to_remove = []
+    mans.each do |m|
+      ptr = m.packages.select do |p|
+        p.name == package_name &&
+        (versions.nil? || versions.include?(p.version) || versions.include?(p.full_version))
+      end
+      @pending[:manifests] << m
+      m.packages.subtract(ptr)
+      packages_to_remove.concat(ptr)
+    end
+    @pending[:remove].merge(packages_to_remove)
+    @pending[:manifests] << manifest
+  end
+
+  def purge_package(package)
+    @packages.delete(package)
+    @manifests.each do |m|
+      next unless m.packages.delete?(package)
+      @pending[:manifests] << m
+    end
+  end
+
+  def upload_package_s3
+    @pending[:upload].each do |pkg|
+      next unless @packages.add?(pkg)
+      s3_store(pkg.filename, pkg.filename, 'application/octet-stream; charset=binary')
+    end
+  end
+
+  def remove_package_s3
+    @pending[:remove].each do |pkg|
+      next if @manifests.any? { |m| m.packages.include?(pkg) }
+      s3_remove(pkg.filename)
+      @packages.delete(pkg)
+    end
+  end
+
+  def manifests_same_component(manifest)
+    @manifests.select { |m| m.component == manifest.component }
   end
 end
