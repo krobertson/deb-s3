@@ -38,6 +38,8 @@ class Deb::S3::Package
 
   attr_accessor :filename
 
+  attr_accessor :codename
+
   class << self
     include Deb::S3::Utils
 
@@ -56,7 +58,7 @@ class Deb::S3::Package
     end
 
     def extract_control(package)
-      if system("which dpkg &> /dev/null")
+      if system("which dpkg > /dev/null 2>&1")
         `dpkg -f #{package}`
       else
         # ar fails to find the control.tar.gz tarball within the .deb
@@ -114,6 +116,8 @@ class Deb::S3::Package
     @filename = nil
     @url_filename = nil
 
+    @codename = nil
+
     @dependencies = []
   end
 
@@ -127,13 +131,9 @@ class Deb::S3::Package
     @filename
   end
 
-  def url_filename
-    @url_filename || "pool/#{self.name[0]}/#{self.name[0..1]}/#{File.basename(self.filename)}"
-  end
-
-  def url_filename_encoded
-    @url_filename || "pool/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
-  end
+  # def url_filename_encoded
+  #   @url_filename || "pool/#{@codename}/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
+  # end
 
   def generate
     template("package.erb").result(binding)
