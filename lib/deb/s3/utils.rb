@@ -3,6 +3,7 @@ require "base64"
 require "digest/md5"
 require "erb"
 require "tmpdir"
+require "deb/s3/log"
 
 module Deb::S3::Utils
   module_function
@@ -55,7 +56,7 @@ module Deb::S3::Utils
   end
 
   def s3_exists?(path)
-    Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(path)].exists?
+    !Deb::S3::Utils.s3.nil? && Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(path)].exists?
   end
 
   def s3_read(path)
@@ -70,8 +71,9 @@ module Deb::S3::Utils
     file_md5 = Digest::MD5.file(path)
 
     # check if the object already exists
-    if obj.exists?
-      return if (file_md5.to_s == obj.etag.gsub('"', '') or file_md5.to_s == obj.metadata['md5'])
+    if obj.exists? && (file_md5.to_s == obj.etag.gsub('"', '') || file_md5.to_s == obj.metadata['md5'])
+      Log.log.debug("#{path} already on S3")
+      return
     end
 
     # specify if encryption is required
@@ -79,10 +81,12 @@ module Deb::S3::Utils
     options[:server_side_encryption] = :aes256 if Deb::S3::Utils.encryption
 
     # upload the file
+    Log.log.debug("Transfering #{path}")
     obj.write(Pathname.new(path), options)
   end
 
   def s3_remove(path)
+    Log.log.debug("Removing #{path}")
     Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(path)].delete if s3_exists?(path)
   end
 end

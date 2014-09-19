@@ -3,6 +3,7 @@ require "tempfile"
 require "zlib"
 require 'deb/s3/utils'
 require 'deb/s3/package'
+require "deb/s3/log"
 
 class Deb::S3::Manifest
   include Deb::S3::Utils
@@ -50,33 +51,40 @@ class Deb::S3::Manifest
 
   def add(pkg, preserve_versions, needs_uploading=true)
     if preserve_versions
-      delete_package(pkg.name, [pkg.full_version])
+      delete_package(pkg.name, {:full_versions => [pkg.full_version]})
     else
       delete_package(pkg.name)
     end
 
-    @packages << pkg
-    @packages_to_be_upload << pkg if needs_uploading
+    packages << pkg
+    packages_to_be_upload << pkg if needs_uploading
     pkg
   end
 
-  def delete_package(package_name, versions=nil)
-    deleted = @packages.select { |p| p.name == package_name && (versions.nil? || versions.include?(p.version)) }
+  def delete_package(package_name, opt = {})
+    versions = opt[:versions]
+    full_versions = opt[:full_versions]
+    deleted = packages.select do |p|
+      p.name == package_name &&
+      (versions.nil? || versions.include?(p.version)) &&
+      (full_versions.nil? || full_versions.include?(p.full_version))
+    end
     deleted.each do |p|
+      Log.log.info("Removing #{p.name} #{p.full_version}")
       s3_remove(p.url_filename)
     end
-    @packages = @packages - deleted
+    packages.reject! {|p| deleted.include?(p)}
     deleted
   end
 
   def generate
-    @packages.collect { |pkg| pkg.generate }.join("\n")
+    packages.collect { |pkg| pkg.generate }.join("\n")
   end
 
   def write_to_s3
     # store any packages that need to be stored
-    @packages_to_be_upload.each do |pkg|
-      yield pkg.url_filename if block_given?
+    packages_to_be_upload.each do |pkg|
+      Log.log.info("Upload #{pkg.name} #{pkg.full_version}")
       s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary')
     end
 
@@ -87,7 +95,7 @@ class Deb::S3::Manifest
     pkgs_temp.write manifest
     pkgs_temp.close
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages"
-    yield f if block_given?
+    Log.log.info("Upload #{f}")
     s3_store(pkgs_temp.path, f, 'binary/octet-stream; charset=binary')
     @files["#{@component}/binary-#{@architecture}/Packages"] = hashfile(pkgs_temp.path)
     pkgs_temp.unlink
@@ -97,7 +105,7 @@ class Deb::S3::Manifest
     gztemp.close
     Zlib::GzipWriter.open(gztemp.path) { |gz| gz.write manifest }
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages.gz"
-    yield f if block_given?
+    Log.log.info("Upload #{f}")
     s3_store(gztemp.path, f, 'application/x-gzip; charset=binary')
     @files["#{@component}/binary-#{@architecture}/Packages.gz"] = hashfile(gztemp.path)
     gztemp.unlink

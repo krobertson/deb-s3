@@ -5,6 +5,7 @@ require 'deb/s3/manifest'
 describe Deb::S3::Manifest do
   before do
     @manifest = Deb::S3::Manifest.new
+    Log.log.level = Logger::FATAL
   end
 
   describe "#add" do
