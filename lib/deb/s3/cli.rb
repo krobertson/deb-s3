@@ -230,7 +230,7 @@ class Deb::S3::CLI < Thor
 
     # retrieve the existing manifests
     log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename])
+    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin])
     manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch])
 
     deleted = manifest.delete_package(package, versions)
@@ -273,7 +273,7 @@ class Deb::S3::CLI < Thor
     configure_s3_client
 
     log("Retrieving existing manifests")
-    release = Deb::S3::Release.retrieve(options[:codename])
+    release = Deb::S3::Release.retrieve(options[:codename], options[:origin])
 
     release.architectures.each do |arch|
       log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
