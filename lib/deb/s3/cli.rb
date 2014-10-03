@@ -10,8 +10,15 @@ require "deb/s3/utils"
 require "deb/s3/manifest"
 require "deb/s3/package"
 require "deb/s3/release"
+require "deb/s3/log"
 
 class Deb::S3::CLI < Thor
+  class_option :debug,
+  :aliases  => "-d",
+  :default  => false,
+  :type     => :boolean,
+  :desc     => "Activate debug"
+
   class_option :bucket,
   :type     => :string,
   :aliases  => "-b",
@@ -92,17 +99,17 @@ class Deb::S3::CLI < Thor
   desc "upload FILES",
   "Uploads the given files to a S3 bucket as an APT repository."
 
-  option :arch,
-  :type     => :string,
-  :aliases  => "-a",
-  :desc     => "The architecture of the package in the APT repository."
-
   option :preserve_versions,
   :default  => false,
   :type     => :boolean,
   :aliases  => "-p",
   :desc     => "Whether to preserve other versions of a package " +
     "in the repository when uploading one."
+
+  def initialize(*args)
+    super
+    Log.log.level = Logger::DEBUG if options[:debug]
+  end
 
   def upload(*files)
     component = options[:component]
@@ -112,78 +119,49 @@ class Deb::S3::CLI < Thor
     end
 
     if files.nil? || files.empty?
-      error("You must specify at least one file to upload")
+      Log.log.fatal("You must specify at least one file to upload")
     end
 
     # make sure all the files exists
     if missing_file = files.find { |pattern| Dir.glob(pattern).empty? }
-      error("File '#{missing_file}' doesn't exist")
+      Log.log.fatal("File '#{missing_file}' doesn't exist")
     end
 
     # configure AWS::S3
     configure_s3_client
 
     # retrieve the existing manifests
-    log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin])
-    manifests = {}
-    release.architectures.each do |arch|
-      manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
-    end
-
-    packages_arch_all = []
+    Log.log.info("Retrieving existing manifest")
+    release = Deb::S3::Release.retrieve(options[:codename], options[:origin])
 
     # examine all the files
-    files.collect { |f| Dir.glob(f) }.flatten.each do |file|
-      log("Examining package file #{File.basename(file)}")
+    files.map { |f| Dir.glob(f) }.flatten.each do |file|
+      Log.log.info("Examining package file #{File.basename(file)}")
       pkg = Deb::S3::Package.parse_file(file)
 
       # copy over some options if they weren't given
-      arch = options[:arch] || pkg.architecture
+      arch = pkg.architecture
 
-      # validate we have them
-      error("No architcture given and unable to determine one for #{file}. " +
-            "Please specify one with --arch [i386|amd64].") unless arch
+      manifest = release.add_manifest(arch, component)
+      pkg.filename = File.join(manifest.package_url_prefix, pkg.name, File.basename(file))
 
-      # If the arch is all and the list of existing manifests is none, then
-      # throw an error. This is mainly the case when initializing a brand new
-      # repository. With "all", we won't know which architectures they're using.
-      if arch == "all" && manifests.count == 0
-        error("Package #{File.basename(file)} had architecture \"all\", " +
-              "however noexisting package lists exist. This can often happen " +
-              "if the first package you are add to a new repository is an " +
-              "\"all\" architecture file. Please use --arch [i386|amd64] or " +
-              "another platform type to upload the file.")
+      unless options[:preserve_versions]
+        release.delete_package(pkg.name, manifest, [])
       end
-
-      # retrieve the manifest for the arch if we don't have it already
-      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch)
 
       # add package in manifests
-      manifests[arch].add(pkg, options[:preserve_versions])
-
-      # If arch is all, we must add this package in all arch available
-      if arch == 'all'
-        packages_arch_all << pkg
-      end
-    end
-
-    manifests.each do |arch, manifest|
-      next if arch == 'all'
-      packages_arch_all.each do |pkg|
-        manifest.add(pkg, options[:preserve_versions], false)
-      end
+      release.add_package(pkg, manifest)
     end
 
     # upload the manifest
-    log("Uploading packages and new manifests to S3")
-    manifests.each_value do |manifest|
-      manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
-      release.update_manifest(manifest)
-    end
-    release.write_to_s3 { |f| sublog("Transferring #{f}") }
+    # Log.log.info("Uploading packages and new manifests to S3")
+    # manifests.each_value do |manifest|
+    #   manifest.write_to_s3
+    #   release.update_manifest(manifest)
+    # end
+    release.write_to_s3
 
-    log("Update complete.")
+    Log.log.info("Update complete.")
   end
 
   desc "delete PACKAGE",
@@ -211,49 +189,34 @@ class Deb::S3::CLI < Thor
     end
 
     if package.nil?
-      error("You must specify a package name.")
+      Log.log.fatal("You must specify a package name.")
     end
 
     versions = options[:versions]
     if versions.nil?
       warn("===> WARNING: Deleting all versions of #{package}")
     else
-      log("Versions to delete: #{versions.join(', ')}")
+      Log.log.info("Versions to delete: #{versions.join(', ')}")
     end
 
     arch = options[:arch]
     if arch.nil?
-      error("You must specify the architecture of the package to remove.")
+      Log.log.fatal("You must specify the architecture of the package to remove.")
     end
 
     configure_s3_client
 
     # retrieve the existing manifests
-    log("Retrieving existing manifests")
+    Log.log.info("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename], options[:origin])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch])
 
-    deleted = manifest.delete_package(package, versions)
-    if deleted.length == 0
-        if versions.nil?
-            error("No packages were deleted. #{package} not found.")
-        else
-            error("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found.")
-        end
-    else
-        deleted.each { |p|
-            sublog("Deleting #{p.name} version #{p.version}")
-        }
-    end
+    manifest = release.add_manifest(arch, component)
 
-    log("Uploading new manifests to S3")
-    manifest.write_to_s3 {|f| sublog("Transferring #{f}") }
-    release.update_manifest(manifest)
-    release.write_to_s3 {|f| sublog("Transferring #{f}") }
+    release.delete_package(package, manifest, versions)
+    release.write_to_s3
 
-    log("Update complete.")
+    Log.log.info("Update complete.")
   end
-
 
   desc "verify", "Verifies that the files in the package manifests exist"
 
@@ -272,57 +235,40 @@ class Deb::S3::CLI < Thor
 
     configure_s3_client
 
-    log("Retrieving existing manifests")
+    Log.log.info("Retrieving release")
     release = Deb::S3::Release.retrieve(options[:codename], options[:origin])
 
-    release.architectures.each do |arch|
-      log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
-      manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
-      missing_packages = []
+    packages_missing = Set.new
 
-      manifest.packages.each do |p|
-        unless Deb::S3::Utils.s3_exists? p.url_filename_encoded
-          sublog("The following packages are missing:\n\n") if missing_packages.empty?
-          puts(p.generate)
-          puts("")
+    release.packages.each do |p|
+      Log.log.debug("Verifing package #{p} #{p.filename}")
+      next if Deb::S3::Utils.s3_exists? p.filename
+      Log.log.info("Package #{p} missing")
+      packages_missing << p
+    end
 
-          missing_packages << p
-        end
-      end
+    if packages_missing.empty?
+      Log.log.info("Everything ok")
+      return
+    end
 
-      if options[:sign] || (options[:fix_manifests] && !missing_packages.empty?)
-        log("Removing #{missing_packages.length} package(s) from the manifest...")
-        missing_packages.each { |p| manifest.packages.delete(p) }
-        manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
-        release.update_manifest(manifest)
-        release.write_to_s3 { |f| sublog("Transferring #{f}") }
-
-        log("Update complete.")
-      end
+    if options[:fix_manifests]
+      packages_missing.each { |p| release.purge_package(p) }
+      release.write_to_s3
+      Log.log.info("Packages fixed")
+    else
+      Log.log.info('Problems remain. Try --fix-manifests to fix it')
     end
   end
 
   private
-
-  def log(message)
-    puts ">> #{message}"
-  end
-
-  def sublog(message)
-    puts "   -- #{message}"
-  end
-
-  def error(message)
-    puts "!! #{message}"
-    exit 1
-  end
 
   def provider
     access_key_id     = options[:access_key_id]
     secret_access_key = options[:secret_access_key]
 
     if access_key_id.nil? ^ secret_access_key.nil?
-      error("If you specify one of --access-key-id or --secret-access-key, you must specify the other.")
+      Log.log.fatal("If you specify one of --access-key-id or --secret-access-key, you must specify the other.")
     end
 
     static_credentials = {}
@@ -333,7 +279,7 @@ class Deb::S3::CLI < Thor
   end
 
   def configure_s3_client
-    error("No value provided for required options '--bucket'") unless options[:bucket]
+    Log.log.fatal("No value provided for required options '--bucket'") unless options[:bucket]
 
     settings = {
       :s3_endpoint => options[:endpoint],
@@ -359,7 +305,21 @@ class Deb::S3::CLI < Thor
       when "authenticated"
         :authenticated_read
       else
-        error("Invalid visibility setting given. Can be public, private, or authenticated.")
+        Log.log.fatal("Invalid visibility setting given. Can be public, private, or authenticated.")
       end
+  end
+
+  def delete_package(manifest, package, versions)
+    deleted = manifest.delete_package(package, {:versions => versions})
+    if deleted.length == 0
+        if versions.nil?
+            Log.log.fatal("No packages were deleted. #{package} not found.")
+        else
+            Log.log.fatal("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found.")
+        end
+    end
+
+    Log.log.info("Uploading new manifests to S3")
+    manifest.write_to_s3
   end
 end
