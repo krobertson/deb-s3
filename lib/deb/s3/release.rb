@@ -6,6 +6,7 @@ class Deb::S3::Release
 
   attr_accessor :codename
   attr_accessor :origin
+  attr_accessor :suite
   attr_accessor :architectures
   attr_accessor :components
 
@@ -14,6 +15,7 @@ class Deb::S3::Release
 
   def initialize
     @origin = nil
+    @suite = nil
     @codename = nil
     @architectures = []
     @components = []
@@ -22,13 +24,14 @@ class Deb::S3::Release
   end
 
   class << self
-    def retrieve(codename, origin=nil)
+    def retrieve(codename, origin=nil, suite=nil)
       if s = Deb::S3::Utils.s3_read("dists/#{codename}/Release")
         self.parse_release(s)
       else
         rel = self.new
         rel.codename = codename
         rel.origin = origin
+        rel.suite = suite
         rel
       end
     end
@@ -57,6 +60,7 @@ class Deb::S3::Release
     # grab basic fields
     self.codename = parse.call("Codename")
     self.origin = parse.call("Origin") || nil
+    self.suite = parse.call("Suite") || nil
     self.architectures = (parse.call("Architectures") || "").split(/\s+/)
     self.components = (parse.call("Components") || "").split(/\s+/)
 

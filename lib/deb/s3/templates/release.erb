@@ -5,6 +5,7 @@ Codename: <%= codename %>
 Date: <%= Time.now.utc.strftime("%a, %d %b %Y %T %Z") %>
 Architectures: <%= architectures.join(" ") %>
 Components: <%= components.join(" ") %>
+Suite: <%= suite %>
 MD5Sum:
 <% files.sort.each do |f,p| -%>
  <%= p[:md5] %> <%= p[:size].to_s.rjust(16) %> <%= f %>

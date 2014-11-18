@@ -26,6 +26,10 @@ class Deb::S3::CLI < Thor
   :aliases  => "-o",
   :desc     => "The origin to use in the repository Release file."
 
+  class_option :suite,
+  :type     => :string,
+  :desc     => "The suite to use in the repository Release file."
+
   class_option :codename,
   :default  => "stable",
   :type     => :string,
@@ -125,7 +129,7 @@ class Deb::S3::CLI < Thor
 
     # retrieve the existing manifests
     log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin])
+    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
     manifests = {}
     release.architectures.each do |arch|
       manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
@@ -230,7 +234,7 @@ class Deb::S3::CLI < Thor
 
     # retrieve the existing manifests
     log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin])
+    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
     manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch])
 
     deleted = manifest.delete_package(package, versions)
@@ -273,7 +277,7 @@ class Deb::S3::CLI < Thor
     configure_s3_client
 
     log("Retrieving existing manifests")
-    release = Deb::S3::Release.retrieve(options[:codename], options[:origin])
+    release = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
 
     release.architectures.each do |arch|
       log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
