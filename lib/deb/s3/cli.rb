@@ -102,6 +102,11 @@ class Deb::S3::CLI < Thor
   :aliases  => "-a",
   :desc     => "The architecture of the package in the APT repository."
 
+  option :cache_control,
+  :type     => :string,
+  :aliases  => "-C",
+  :desc     => "Add cache-control headers to S3 objects"
+
   option :preserve_versions,
   :default  => false,
   :type     => :boolean,
@@ -124,10 +129,10 @@ class Deb::S3::CLI < Thor
 
     # retrieve the existing manifests
     log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin])
+    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:cache_control])
     manifests = {}
     release.architectures.each do |arch|
-      manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+      manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
     end
 
     packages_arch_all = []
@@ -156,7 +161,7 @@ class Deb::S3::CLI < Thor
       end
 
       # retrieve the manifest for the arch if we don't have it already
-      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
 
       # add package in manifests
       manifests[arch].add(pkg, options[:preserve_versions])
@@ -258,6 +263,11 @@ class Deb::S3::CLI < Thor
 
   desc "copy PACKAGE TO_CODENAME TO_COMPONENT ",
     "Copy the package named PACKAGE to given codename and component. If --versions is not specified, copy all versions of PACKAGE. Otherwise, only the specified versions will be copied. Source codename and component is given by --codename and --component options."
+
+  option :cache_control,
+  :type     => :string,
+  :aliases  => "-C",
+  :desc     => "Add cache-control headers to S3 objects"
 
   option :arch,
     :type     => :string,
