@@ -63,7 +63,7 @@ module Deb::S3::Utils
     Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(path)].read
   end
 
-  def s3_store(path, filename=nil, content_type='application/octet-stream; charset=binary')
+  def s3_store(path, filename=nil, content_type='application/octet-stream; charset=binary', cache_control=nil)
     filename = File.basename(path) unless filename
     obj = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(filename)]
 
@@ -74,8 +74,12 @@ module Deb::S3::Utils
       return if (file_md5.to_s == obj.etag.gsub('"', '') or file_md5.to_s == obj.metadata['md5'])
     end
 
-    # specify if encryption is required
     options = {:acl => Deb::S3::Utils.access_policy, :content_type => content_type, :metadata => {'md5' => file_md5}}
+    if !cache_control.nil?
+      options[:cache_control] = cache_control
+    end
+
+    # specify if encryption is required
     options[:server_side_encryption] = :aes256 if Deb::S3::Utils.encryption
 
     # upload the file

@@ -9,6 +9,7 @@ class Deb::S3::Manifest
 
   attr_accessor :codename
   attr_accessor :component
+  attr_accessor :cache_control
   attr_accessor :architecture
 
   attr_accessor :files
@@ -22,10 +23,11 @@ class Deb::S3::Manifest
     @component = nil
     @architecture = nil
     @files = {}
+    @cache_control = ""
   end
 
   class << self
-    def retrieve(codename, component, architecture)
+    def retrieve(codename, component, architecture, cache_control)
       m = if s = Deb::S3::Utils.s3_read("dists/#{codename}/#{component}/binary-#{architecture}/Packages")
         self.parse_packages(s)
       else
@@ -35,6 +37,7 @@ class Deb::S3::Manifest
       m.codename = codename
       m.component = component
       m.architecture = architecture
+      m.cache_control = cache_control 
       m
     end
 
@@ -94,7 +97,7 @@ class Deb::S3::Manifest
     pkgs_temp.close
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages"
     yield f if block_given?
-    s3_store(pkgs_temp.path, f, 'binary/octet-stream; charset=binary')
+    s3_store(pkgs_temp.path, f, 'binary/octet-stream; charset=binary', self.cache_control)
     @files["#{@component}/binary-#{@architecture}/Packages"] = hashfile(pkgs_temp.path)
     pkgs_temp.unlink
 
@@ -104,7 +107,7 @@ class Deb::S3::Manifest
     Zlib::GzipWriter.open(gztemp.path) { |gz| gz.write manifest }
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages.gz"
     yield f if block_given?
-    s3_store(gztemp.path, f, 'application/x-gzip; charset=binary')
+    s3_store(gztemp.path, f, 'application/x-gzip; charset=binary', self.cache_control)
     @files["#{@component}/binary-#{@architecture}/Packages.gz"] = hashfile(gztemp.path)
     gztemp.unlink
 
