@@ -94,6 +94,11 @@ class Deb::S3::CLI < Thor
   :aliases => "-q",
   :desc => "Doesn't output information, just returns status appropriately."
 
+  class_option :cache_control,
+  :type     => :string,
+  :aliases  => "-C",
+  :desc     => "Add cache-control headers to S3 objects"
+
   desc "upload FILES",
   "Uploads the given files to a S3 bucket as an APT repository."
 
@@ -101,11 +106,6 @@ class Deb::S3::CLI < Thor
   :type     => :string,
   :aliases  => "-a",
   :desc     => "The architecture of the package in the APT repository."
-
-  option :cache_control,
-  :type     => :string,
-  :aliases  => "-C",
-  :desc     => "Add cache-control headers to S3 objects"
 
   option :preserve_versions,
   :default  => false,
@@ -211,7 +211,8 @@ class Deb::S3::CLI < Thor
     archs &= [options[:arch]] if options[:arch] && options[:arch] != "all"
     widths = [0, 0]
     rows = archs.map { |arch|
-      manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], component,
+      																			arch, options[:cache_control])
       manifest.packages.map do |package|
         if options[:long]
           package.generate
@@ -250,7 +251,8 @@ class Deb::S3::CLI < Thor
     configure_s3_client
 
     # retrieve the existing manifests
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch,
+    																			options[:cache_control])
     package = manifest.packages.detect { |p|
       p.name == package_name && p.full_version == version
     }
@@ -316,9 +318,11 @@ class Deb::S3::CLI < Thor
     # retrieve the existing manifests
     log "Retrieving existing manifests"
     from_manifest = Deb::S3::Manifest.retrieve(options[:codename],
-                                               component, arch)
+                                               component, arch,
+                                               options[:cache_control])
     to_release = Deb::S3::Release.retrieve(to_codename)
-    to_manifest = Deb::S3::Manifest.retrieve(to_codename, to_component, arch)
+    to_manifest = Deb::S3::Manifest.retrieve(to_codename, to_component, arch,
+    																				 options[:cache_control])
     packages = from_manifest.packages.select { |p|
       p.name == package_name &&
         (versions.nil? || versions.include?(p.full_version))
@@ -377,7 +381,7 @@ class Deb::S3::CLI < Thor
     # retrieve the existing manifests
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename], options[:origin])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch])
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control])
 
     deleted = manifest.delete_package(package, versions)
     if deleted.length == 0
@@ -417,7 +421,8 @@ class Deb::S3::CLI < Thor
 
     release.architectures.each do |arch|
       log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
-      manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], component,
+      																			arch, options[:cache_control])
       missing_packages = []
 
       manifest.packages.each do |p|
