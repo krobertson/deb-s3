@@ -49,7 +49,7 @@ module Deb::S3::Utils
 
   # from fog, Fog::AWS.escape
   def s3_escape(string)
-    string.gsub(/([^a-zA-Z0-9_.\-~]+)/) {
+    string.gsub(/([^a-zA-Z0-9_.\-~+]+)/) {
       "%" + $1.unpack("H2" * $1.bytesize).join("%").upcase
     }
   end
