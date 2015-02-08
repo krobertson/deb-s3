@@ -2,22 +2,24 @@ PATH
   remote: .
   specs:
     deb-s3 (0.6.2)
-      aws-sdk (~> 1.18)
+      aws-sdk (~> 1.32)
       thor (~> 0.18.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    aws-sdk (1.23.0)
+    aws-sdk (1.60.2)
+      aws-sdk-v1 (= 1.60.2)
+    aws-sdk-v1 (1.60.2)
       json (~> 1.4)
-      nokogiri (>= 1.4.4, < 1.6.0)
-      uuidtools (~> 2.1)
-    json (1.8.1)
+      nokogiri (>= 1.4.4)
+    json (1.8.2)
+    mini_portile (0.6.2)
     minitest (5.0.8)
-    nokogiri (1.5.10)
+    nokogiri (1.6.5)
+      mini_portile (~> 0.6.0)
     rake (10.1.1)
     thor (0.18.1)
-    uuidtools (2.1.4)
 
 PLATFORMS
   ruby
