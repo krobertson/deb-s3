@@ -124,6 +124,3 @@ Options:
 Verifies that the files in the package manifests exist
 ```
 
-## TODO
-
-This is still experimental. There are several things to be done.
