@@ -93,6 +93,16 @@ class Deb::S3::CLI < Thor
   :aliases  => "-e",
   :desc     => "Use S3 server side encryption"
 
+  class_option :quiet,
+  :type => :boolean,
+  :aliases => "-q",
+  :desc => "Doesn't output information, just returns status appropriately."
+
+  class_option :cache_control,
+  :type     => :string,
+  :aliases  => "-C",
+  :desc     => "Add cache-control headers to S3 objects"
+
   desc "upload FILES",
   "Uploads the given files to a S3 bucket as an APT repository."
 
@@ -109,12 +119,6 @@ class Deb::S3::CLI < Thor
     "in the repository when uploading one."
 
   def upload(*files)
-    component = options[:component]
-    if options[:section]
-      component = options[:section]
-      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
-    end
-
     if files.nil? || files.empty?
       error("You must specify at least one file to upload")
     end
@@ -129,10 +133,10 @@ class Deb::S3::CLI < Thor
 
     # retrieve the existing manifests
     log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
+    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite], options[:cache_control])
     manifests = {}
     release.architectures.each do |arch|
-      manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+      manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
     end
 
     packages_arch_all = []
@@ -161,7 +165,7 @@ class Deb::S3::CLI < Thor
       end
 
       # retrieve the manifest for the arch if we don't have it already
-      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
 
       # add package in manifests
       manifests[arch].add(pkg, options[:preserve_versions])
@@ -190,6 +194,158 @@ class Deb::S3::CLI < Thor
     log("Update complete.")
   end
 
+  desc "list", "Lists packages in given codename, component, and optionally architecture"
+
+  option :long,
+  :type     => :boolean,
+  :aliases  => '-l',
+  :desc     => "Shows all package information in original format",
+  :default  => false
+
+  option :arch,
+  :type     => :string,
+  :aliases  => "-a",
+  :desc     => "The architecture of the package in the APT repository."
+
+  def list
+    configure_s3_client
+
+    release = Deb::S3::Release.retrieve(options[:codename])
+    archs = release.architectures
+    archs &= [options[:arch]] if options[:arch] && options[:arch] != "all"
+    widths = [0, 0]
+    rows = archs.map { |arch|
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], component,
+                                            arch, options[:cache_control])
+      manifest.packages.map do |package|
+        if options[:long]
+          package.generate
+        else
+          [package.name, package.full_version, package.architecture].tap do |row|
+            row.each_with_index do |col, i|
+              widths[i] = [widths[i], col.size].max if widths[i]
+            end
+          end
+        end
+      end
+    }.flatten(1)
+
+    if options[:long]
+      $stdout.puts rows.join("\n")
+    else
+      rows.each do |row|
+        $stdout.puts "% -#{widths[0]}s  % -#{widths[1]}s  %s" % row
+      end
+    end
+  end
+
+  desc "show PACKAGE VERSION ARCH", "Shows information about a package."
+
+  def show(package_name, version, arch)
+    if version.nil?
+      error "You must specify the name of the package to show."
+    end
+    if version.nil?
+      error "You must specify the version of the package to show."
+    end
+    if arch.nil?
+      error "You must specify the architecture of the package to show."
+    end
+
+    configure_s3_client
+
+    # retrieve the existing manifests
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch,
+                                          options[:cache_control])
+    package = manifest.packages.detect { |p|
+      p.name == package_name && p.full_version == version
+    }
+    if package.nil?
+      error "No such package found."
+    end
+
+    puts package.generate
+  end
+
+  desc "copy PACKAGE TO_CODENAME TO_COMPONENT ",
+    "Copy the package named PACKAGE to given codename and component. If --versions is not specified, copy all versions of PACKAGE. Otherwise, only the specified versions will be copied. Source codename and component is given by --codename and --component options."
+
+  option :cache_control,
+  :type     => :string,
+  :aliases  => "-C",
+  :desc     => "Add cache-control headers to S3 objects"
+
+  option :arch,
+    :type     => :string,
+    :aliases  => "-a",
+    :desc     => "The architecture of the package in the APT repository."
+
+  option :versions,
+    :default  => nil,
+    :type     => :array,
+    :desc     => "The space-delimited versions of PACKAGE to delete. If not" +
+    "specified, ALL VERSIONS will be deleted. Fair warning." +
+    "E.g. --versions \"0.1 0.2 0.3\""
+
+  option :preserve_versions,
+    :default  => false,
+    :type     => :boolean,
+    :aliases  => "-p",
+    :desc     => "Whether to preserve other versions of a package " +
+    "in the repository when uploading one."
+
+  def copy(package_name, to_codename, to_component)
+    if package_name.nil?
+      error "You must specify a package name."
+    end
+    if to_codename.nil?
+      error "You must specify a codename to copy to."
+    end
+    if to_component.nil?
+      error "You must specify a component to copy to."
+    end
+
+    arch = options[:arch]
+    if arch.nil?
+      error "You must specify the architecture of the package to copy."
+    end
+
+    versions = options[:versions]
+    if versions.nil?
+      warn "===> WARNING: Copying all versions of #{package_name}"
+    else
+      log "Versions to copy: #{versions.join(', ')}"
+    end
+
+    configure_s3_client
+
+    # retrieve the existing manifests
+    log "Retrieving existing manifests"
+    from_manifest = Deb::S3::Manifest.retrieve(options[:codename],
+                                               component, arch,
+                                               options[:cache_control])
+    to_release = Deb::S3::Release.retrieve(to_codename)
+    to_manifest = Deb::S3::Manifest.retrieve(to_codename, to_component, arch,
+                                             options[:cache_control])
+    packages = from_manifest.packages.select { |p|
+      p.name == package_name &&
+        (versions.nil? || versions.include?(p.full_version))
+    }
+    if packages.size == 0
+      error "No packages found in repository."
+    end
+
+    packages.each do |package|
+      to_manifest.add package, options[:preserve_versions], false
+    end
+
+    to_manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+    to_release.update_manifest(to_manifest)
+    to_release.write_to_s3 { |f| sublog("Transferring #{f}") }
+
+    log "Copy complete."
+  end
+
   desc "delete PACKAGE",
     "Remove the package named PACKAGE. If --versions is not specified, delete" +
     "all versions of PACKAGE. Otherwise, only the specified versions will be " +
@@ -208,12 +364,6 @@ class Deb::S3::CLI < Thor
     "E.g. --versions \"0.1 0.2 0.3\""
 
   def delete(package)
-    component = options[:component]
-    if options[:section]
-      component = options[:section]
-      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
-    end
-
     if package.nil?
       error("You must specify a package name.")
     end
@@ -235,7 +385,7 @@ class Deb::S3::CLI < Thor
     # retrieve the existing manifests
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch])
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control])
 
     deleted = manifest.delete_package(package, versions)
     if deleted.length == 0
@@ -268,12 +418,6 @@ class Deb::S3::CLI < Thor
   :desc     => "Whether to fix problems in manifests when verifying."
 
   def verify
-    component = options[:component]
-    if options[:section]
-      component = options[:section]
-      warn("===> WARNING: The --section/-s argument is deprecated, please use --component/-m.")
-    end
-
     configure_s3_client
 
     log("Retrieving existing manifests")
@@ -281,7 +425,8 @@ class Deb::S3::CLI < Thor
 
     release.architectures.each do |arch|
       log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
-      manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch)
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], component,
+                                            arch, options[:cache_control])
       missing_packages = []
 
       manifest.packages.each do |p|
@@ -308,16 +453,31 @@ class Deb::S3::CLI < Thor
 
   private
 
+  def component
+    return @component if @component
+    @component = if (section = options[:section])
+                   warn("===> WARNING: The --section/-s argument is " \
+                        "deprecated, please use --component/-m.")
+                   section
+                 else
+                   options[:component]
+                 end
+  end
+
+  def puts(*args)
+    $stdout.puts(*args) unless options[:quiet]
+  end
+
   def log(message)
-    puts ">> #{message}"
+    puts ">> #{message}" unless options[:quiet]
   end
 
   def sublog(message)
-    puts "   -- #{message}"
+    puts "   -- #{message}" unless options[:quiet]
   end
 
   def error(message)
-    puts "!! #{message}"
+    $stderr.puts "!! #{message}" unless options[:quiet]
     exit 1
   end
 

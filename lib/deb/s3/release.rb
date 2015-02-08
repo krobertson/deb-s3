@@ -9,6 +9,7 @@ class Deb::S3::Release
   attr_accessor :suite
   attr_accessor :architectures
   attr_accessor :components
+  attr_accessor :cache_control
 
   attr_accessor :files
   attr_accessor :policy
@@ -19,21 +20,23 @@ class Deb::S3::Release
     @codename = nil
     @architectures = []
     @components = []
+    @cache_control = ""
     @files = {}
     @policy = :public_read
   end
 
   class << self
-    def retrieve(codename, origin=nil, suite=nil)
+    def retrieve(codename, origin=nil, suite=nil, cache_control=nil)
       if s = Deb::S3::Utils.s3_read("dists/#{codename}/Release")
-        self.parse_release(s)
+        rel = self.parse_release(s)
       else
         rel = self.new
         rel.codename = codename
-        rel.origin = origin
-        rel.suite = suite
-        rel
+        rel.origin = origin unless origin.nil?
+        rel.suite = suite unless suite.nil?
       end
+      rel.cache_control = cache_control
+      rel
     end
 
     def parse_release(str)
@@ -95,7 +98,7 @@ class Deb::S3::Release
     release_tmp.puts self.generate
     release_tmp.close
     yield self.filename if block_given?
-    s3_store(release_tmp.path, self.filename, 'binary/octet-stream; charset=binary')
+    s3_store(release_tmp.path, self.filename, 'binary/octet-stream; charset=binary', self.cache_control)
 
     # sign the file, if necessary
     if Deb::S3::Utils.signing_key
@@ -105,7 +108,7 @@ class Deb::S3::Release
         remote_file = self.filename+".gpg"
         yield remote_file if block_given?
         raise "Unable to locate Release signature file" unless File.exists?(local_file)
-        s3_store(local_file, remote_file, 'application/pgp-signature; charset=us-ascii')
+        s3_store(local_file, remote_file, 'application/pgp-signature; charset=us-ascii', self.cache_control)
         File.unlink(local_file)
       else
         raise "Signing the Release file failed."
