@@ -1,5 +1,5 @@
 # -*- encoding : utf-8 -*-
-require "aws"
+require "aws-sdk"
 require "thor"
 
 # Hack: aws requires this!
@@ -493,20 +493,23 @@ class Deb::S3::CLI < Thor
     static_credentials[:access_key_id]     = access_key_id     if access_key_id
     static_credentials[:secret_access_key] = secret_access_key if secret_access_key
 
-    AWS::Core::CredentialProviders::DefaultProvider.new(static_credentials)
+    # Aws::Credentials
+    # AWS::Core::CredentialProviders::DefaultProvider.new(static_credentials)
+    static_credentials
   end
 
   def configure_s3_client
     error("No value provided for required options '--bucket'") unless options[:bucket]
 
     settings = {
-      :s3_endpoint => options[:endpoint],
-      :proxy_uri   => options[:proxy_uri],
-      :use_ssl     => options[:use_ssl]
+      :region => "us-east-1", # FIXME
+      # FIXME :s3_endpoint => options[:endpoint],
+      # FIXME :proxy_uri   => options[:proxy_uri],
+      # FIXME :use_ssl     => options[:use_ssl]
     }
-    settings.merge!(provider.credentials)
+    settings.merge!(provider)
 
-    Deb::S3::Utils.s3          = AWS::S3.new(settings)
+    Deb::S3::Utils.s3          = Aws::S3::Client.new(settings)
     Deb::S3::Utils.bucket      = options[:bucket]
     Deb::S3::Utils.signing_key = options[:sign]
     Deb::S3::Utils.gpg_options = options[:gpg_options]
