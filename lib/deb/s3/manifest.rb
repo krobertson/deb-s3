@@ -66,7 +66,7 @@ class Deb::S3::Manifest
         if p.name != pkg
            p
         # Also include the packages not matching a specified version
-        elsif (!versions.nil? and p.name == pkg and !versions.include? p.version)
+        elsif (!versions.nil? and p.name == pkg and versions.select{|v| !v.include? p.version}.length > 0)
             p
         end
     }
