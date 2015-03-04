@@ -284,7 +284,7 @@ class Deb::S3::Package
           indent, rest = $1, $2
           # Continuation
           if indent.size == 1 && rest == "."
-            value << "\n\n"
+            value << "\n"
             rest = ""
           elsif value.size > 0
             value << "\n"
