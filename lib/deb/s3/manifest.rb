@@ -37,7 +37,7 @@ class Deb::S3::Manifest
       m.codename = codename
       m.component = component
       m.architecture = architecture
-      m.cache_control = cache_control 
+      m.cache_control = cache_control
       m
     end
 
@@ -69,7 +69,7 @@ class Deb::S3::Manifest
         if p.name != pkg
            p
         # Also include the packages not matching a specified version
-        elsif (!versions.nil? and p.name == pkg and !versions.include? p.version and !versions.include? p.version + "-" + p.iteration)
+        elsif (!versions.nil? and p.name == pkg and !versions.include?(p.version) and !versions.include?("#{p.version}-#{p.iteration}"))
             p
         end
     }
