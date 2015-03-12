@@ -16,3 +16,8 @@ SHA1: 919b7b7860ed0f5850d031072c00a64c6f41657a
 SHA256: ab79c879c498086b62289da77d770725939acababcbcd8d8af5cf46e1971fd0e
 MD5sum: 11aa00eeb849212667d81ce1904daa4d
 Description: A platform for community discussion. Free, open, simple.
+ The description can have a continuation line.
+ .
+ And blank lines.
+ .
+ If it wants to.
