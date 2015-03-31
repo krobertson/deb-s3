@@ -522,8 +522,10 @@ class Deb::S3::CLI < Thor
         :private
       when "authenticated"
         :authenticated_read
+      when "bucket_owner"
+        :bucket_owner_full_control
       else
-        error("Invalid visibility setting given. Can be public, private, or authenticated.")
+        error("Invalid visibility setting given. Can be public, private, authenticated, or bucket_owner.")
       end
   end
 end
