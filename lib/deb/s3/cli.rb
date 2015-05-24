@@ -78,20 +78,20 @@ class Deb::S3::CLI < Thor
 
   class_option :sign,
   :type     => :string,
-  :desc     => "Sign the Release file when uploading a package," +
-    "or when verifying it after removing a package." +
+  :desc     => "Sign the Release file when uploading a package, " +
+    "or when verifying it after removing a package. " +
     "Use --sign with your key ID to use a specific key."
 
   class_option :gpg_options,
   :default => "",
   :type    => :string,
-  :desc    => "Additional command line options to pass to GPG when signing"
+  :desc    => "Additional command line options to pass to GPG when signing."
 
   class_option :encryption,
   :default  => false,
   :type     => :boolean,
   :aliases  => "-e",
-  :desc     => "Use S3 server side encryption"
+  :desc     => "Use S3 server side encryption."
 
   class_option :quiet,
   :type => :boolean,
@@ -101,7 +101,7 @@ class Deb::S3::CLI < Thor
   class_option :cache_control,
   :type     => :string,
   :aliases  => "-C",
-  :desc     => "Add cache-control headers to S3 objects"
+  :desc     => "Add cache-control headers to S3 objects."
 
   desc "upload FILES",
   "Uploads the given files to a S3 bucket as an APT repository."
@@ -199,7 +199,7 @@ class Deb::S3::CLI < Thor
   option :long,
   :type     => :boolean,
   :aliases  => '-l',
-  :desc     => "Shows all package information in original format",
+  :desc     => "Shows all package information in original format.",
   :default  => false
 
   option :arch,
@@ -273,7 +273,7 @@ class Deb::S3::CLI < Thor
   option :cache_control,
   :type     => :string,
   :aliases  => "-C",
-  :desc     => "Add cache-control headers to S3 objects"
+  :desc     => "Add cache-control headers to S3 objects."
 
   option :arch,
     :type     => :string,
@@ -283,8 +283,8 @@ class Deb::S3::CLI < Thor
   option :versions,
     :default  => nil,
     :type     => :array,
-    :desc     => "The space-delimited versions of PACKAGE to delete. If not" +
-    "specified, ALL VERSIONS will be deleted. Fair warning." +
+    :desc     => "The space-delimited versions of PACKAGE to delete. If not " +
+    "specified, ALL VERSIONS will be deleted. Fair warning. " +
     "E.g. --versions \"0.1 0.2 0.3\""
 
   option :preserve_versions,
@@ -359,8 +359,8 @@ class Deb::S3::CLI < Thor
   option :versions,
     :default  => nil,
     :type     => :array,
-    :desc     => "The space-delimited versions of PACKAGE to delete. If not" +
-    "specified, ALL VERSIONS will be deleted. Fair warning." +
+    :desc     => "The space-delimited versions of PACKAGE to delete. If not " +
+    "specified, ALL VERSIONS will be deleted. Fair warning. " +
     "E.g. --versions \"0.1 0.2 0.3\""
 
   def delete(package)
