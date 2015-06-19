@@ -97,7 +97,7 @@ class Deb::S3::Manifest
     pkgs_temp.close
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages"
     yield f if block_given?
-    s3_store(pkgs_temp.path, f, 'binary/octet-stream; charset=binary', self.cache_control)
+    s3_store(pkgs_temp.path, f, 'text/plain; charset=UTF-8', self.cache_control)
     @files["#{@component}/binary-#{@architecture}/Packages"] = hashfile(pkgs_temp.path)
     pkgs_temp.unlink
 
