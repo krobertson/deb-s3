@@ -83,7 +83,7 @@ packages in the specified component, codename and architecture.
 
 Now to delete the package:
 ```console
-$ deb-s3 delete --arch amd64 --bucket my-bucket --versions 1.0.0 my-deb-package
+$ deb-s3 delete my-deb-package --arch amd64 --bucket my-bucket --versions 1.0.0
 >> Retrieving existing manifests
    -- Deleting my-deb-package version 1.0.0
 >> Uploading new manifests to S3
