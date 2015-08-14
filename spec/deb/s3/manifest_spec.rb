@@ -43,4 +43,28 @@ describe Deb::S3::Manifest do
       end
     end
   end
+
+  describe "#delete_package" do
+    it "removes packages which have the same version as one of the versions specified" do
+      epoch = Time.now.to_i
+      existing_packages_with_same_version = [
+        create_package(:name => "discourse", :epoch => epoch, :version => "0.9.8.3", :iteration => "1"),
+        create_package(:name => "discourse", :epoch => epoch, :version => "0.9.0.0", :iteration => "1"),
+        create_package(:name => "discourse", :epoch => epoch, :version => "0.9.0.0", :iteration => "2"),
+      ]
+      existing_packages_with_different_version = [
+        create_package(:name => "discourse", :epoch => epoch, :version => "0.9.8.3", :iteration => "2"),
+      ]
+      versions_to_delete = ["#{epoch}:0.9.8.3-1", "0.9.0.0"]
+
+      # We set the attribute instead of stubbing it so that it can be re-assigned in `delete_package`
+      @manifest.instance_variable_set(:@packages, existing_packages_with_same_version + existing_packages_with_different_version)
+
+      @manifest.delete_package("discourse", versions_to_delete)
+      @manifest.packages.must_equal existing_packages_with_different_version
+
+      # Reset the attribute
+      @manifest.instance_variable_set(:@packages, [])
+    end
+  end
 end
