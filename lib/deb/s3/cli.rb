@@ -126,6 +126,12 @@ class Deb::S3::CLI < Thor
   :desc     => "Whether to check for an existing lock on the repository " +
     "to prevent simultaneous updates "
 
+  option :fail_if_exists,
+  :default  => false,
+  :type     => :boolean,
+  :desc     => "Whether to overwrite any existing package that has the same " +
+    "filename in the pool or the same name and version in the manifest."
+
   def upload(*files)
     if files.nil? || files.empty?
       error("You must specify at least one file to upload")
@@ -153,13 +159,12 @@ class Deb::S3::CLI < Thor
         @lock_acquired = true
       end
 
-
       # retrieve the existing manifests
       log("Retrieving existing manifests")
       release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite], options[:cache_control])
       manifests = {}
       release.architectures.each do |arch|
-        manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
+        manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control], options[:fail_if_exists])
       end
 
       packages_arch_all = []
@@ -188,10 +193,14 @@ class Deb::S3::CLI < Thor
         end
 
         # retrieve the manifest for the arch if we don't have it already
-        manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
+        manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control], options[:fail_if_exists])
 
         # add package in manifests
-        manifests[arch].add(pkg, options[:preserve_versions])
+        begin
+          manifests[arch].add(pkg, options[:preserve_versions])
+        rescue Deb::S3::Utils::AlreadyExistsError => e
+          error("Preparing manifest failed because: #{e}")
+        end
 
         # If arch is all, we must add this package in all arch available
         if arch == 'all'
@@ -202,14 +211,22 @@ class Deb::S3::CLI < Thor
       manifests.each do |arch, manifest|
         next if arch == 'all'
         packages_arch_all.each do |pkg|
-          manifest.add(pkg, options[:preserve_versions], false)
+          begin
+            manifest.add(pkg, options[:preserve_versions], false)
+          rescue Deb::S3::Utils::AlreadyExistsError => e
+            error("Preparing manifest failed because: #{e}")
+          end
         end
       end
 
       # upload the manifest
       log("Uploading packages and new manifests to S3")
       manifests.each_value do |manifest|
-        manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+        begin
+          manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+        rescue Deb::S3::Utils::AlreadyExistsError => e
+          error("Uploading manifest failed because: #{e}")
+        end
         release.update_manifest(manifest)
       end
       release.write_to_s3 { |f| sublog("Transferring #{f}") }
@@ -245,7 +262,8 @@ class Deb::S3::CLI < Thor
     widths = [0, 0]
     rows = archs.map { |arch|
       manifest = Deb::S3::Manifest.retrieve(options[:codename], component,
-                                            arch, options[:cache_control])
+                                            arch, options[:cache_control],
+                                            false)
       manifest.packages.map do |package|
         if options[:long]
           package.generate
@@ -285,7 +303,7 @@ class Deb::S3::CLI < Thor
 
     # retrieve the existing manifests
     manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch,
-                                          options[:cache_control])
+                                          options[:cache_control], false)
     package = manifest.packages.detect { |p|
       p.name == package_name && p.full_version == version
     }
@@ -323,6 +341,12 @@ class Deb::S3::CLI < Thor
     :desc     => "Whether to preserve other versions of a package " +
     "in the repository when uploading one."
 
+  option :fail_if_exists,
+  :default  => true,
+  :type     => :boolean,
+  :desc     => "Whether to overwrite any existing package that has the same " +
+    "filename in the pool or the same name and version in the manifest."
+
   def copy(package_name, to_codename, to_component)
     if package_name.nil?
       error "You must specify a package name."
@@ -352,10 +376,12 @@ class Deb::S3::CLI < Thor
     log "Retrieving existing manifests"
     from_manifest = Deb::S3::Manifest.retrieve(options[:codename],
                                                component, arch,
-                                               options[:cache_control])
+                                               options[:cache_control],
+                                               false)
     to_release = Deb::S3::Release.retrieve(to_codename)
     to_manifest = Deb::S3::Manifest.retrieve(to_codename, to_component, arch,
-                                             options[:cache_control])
+                                             options[:cache_control],
+                                             options[:fail_if_exists])
     packages = from_manifest.packages.select { |p|
       p.name == package_name &&
         (versions.nil? || versions.include?(p.full_version))
@@ -365,10 +391,18 @@ class Deb::S3::CLI < Thor
     end
 
     packages.each do |package|
-      to_manifest.add package, options[:preserve_versions], false
+      begin
+        to_manifest.add package, options[:preserve_versions], false
+      rescue Deb::S3::Utils::AlreadyExistsError => e
+        error("Preparing manifest failed because: #{e}")
+      end
     end
 
-    to_manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+    begin
+      to_manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+    rescue Deb::S3::Utils::AlreadyExistsError => e
+      error("Copying manifest failed because: #{e}")
+    end
     to_release.update_manifest(to_manifest)
     to_release.write_to_s3 { |f| sublog("Transferring #{f}") }
 
@@ -414,7 +448,7 @@ class Deb::S3::CLI < Thor
     # retrieve the existing manifests
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control])
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control], false)
 
     deleted = manifest.delete_package(package, versions)
     if deleted.length == 0
@@ -455,7 +489,7 @@ class Deb::S3::CLI < Thor
     release.architectures.each do |arch|
       log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
       manifest = Deb::S3::Manifest.retrieve(options[:codename], component,
-                                            arch, options[:cache_control])
+                                            arch, options[:cache_control], false)
       missing_packages = []
 
       manifest.packages.each do |p|
