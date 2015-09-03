@@ -22,6 +22,7 @@ module Deb::S3::Utils
   def encryption= v; @encryption = v end
 
   class SafeSystemError < RuntimeError; end
+  class AlreadyExistsError < RuntimeError; end
 
   def safesystem(*args)
     success = system(*args)
@@ -63,7 +64,7 @@ module Deb::S3::Utils
     Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(path)].read
   end
 
-  def s3_store(path, filename=nil, content_type='application/octet-stream; charset=binary', cache_control=nil)
+  def s3_store(path, filename=nil, content_type='application/octet-stream; charset=binary', cache_control=nil, fail_if_exists=false)
     filename = File.basename(path) unless filename
     obj = Deb::S3::Utils.s3.buckets[Deb::S3::Utils.bucket].objects[s3_path(filename)]
 
@@ -72,6 +73,7 @@ module Deb::S3::Utils
     # check if the object already exists
     if obj.exists?
       return if (file_md5.to_s == obj.etag.gsub('"', '') or file_md5.to_s == obj.metadata['md5'])
+      raise AlreadyExistsError, "file #{obj.public_url} already exists with different contents" if fail_if_exists
     end
 
     options = {:acl => Deb::S3::Utils.access_policy, :content_type => content_type, :metadata => {'md5' => file_md5}}
