@@ -11,6 +11,7 @@ class Deb::S3::Manifest
   attr_accessor :component
   attr_accessor :cache_control
   attr_accessor :architecture
+  attr_accessor :fail_if_exists
 
   attr_accessor :files
 
@@ -24,10 +25,11 @@ class Deb::S3::Manifest
     @architecture = nil
     @files = {}
     @cache_control = ""
+    @fail_if_exists = false
   end
 
   class << self
-    def retrieve(codename, component, architecture, cache_control)
+    def retrieve(codename, component, architecture, cache_control, fail_if_exists)
       m = if s = Deb::S3::Utils.s3_read("dists/#{codename}/#{component}/binary-#{architecture}/Packages")
         self.parse_packages(s)
       else
@@ -38,6 +40,7 @@ class Deb::S3::Manifest
       m.component = component
       m.architecture = architecture
       m.cache_control = cache_control
+      m.fail_if_exists = fail_if_exists
       m
     end
 
@@ -52,6 +55,9 @@ class Deb::S3::Manifest
   end
 
   def add(pkg, preserve_versions, needs_uploading=true)
+    if self.fail_if_exists
+      packages.each { |p| raise AlreadyExistsError, "package #{pkg.name}_#{pkg.full_version} already exists with different filename (#{p.url_filename})" if p.name == pkg.name && p.full_version == pkg.full_version && File.basename(p.url_filename) != File.basename(pkg.filename) }
+    end
     if preserve_versions
       packages.delete_if { |p| p.name == pkg.name && p.full_version == pkg.full_version }
     else
@@ -88,7 +94,7 @@ class Deb::S3::Manifest
     # store any packages that need to be stored
     @packages_to_be_upload.each do |pkg|
       yield pkg.url_filename if block_given?
-      s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary', self.cache_control)
+      s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary', self.cache_control, self.fail_if_exists)
     end
 
     # generate the Packages file
