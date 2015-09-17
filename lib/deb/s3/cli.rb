@@ -10,6 +10,7 @@ require "deb/s3/utils"
 require "deb/s3/manifest"
 require "deb/s3/package"
 require "deb/s3/release"
+require "deb/s3/lock"
 
 class Deb::S3::CLI < Thor
   class_option :bucket,
@@ -118,6 +119,13 @@ class Deb::S3::CLI < Thor
   :desc     => "Whether to preserve other versions of a package " +
     "in the repository when uploading one."
 
+  option :lock,
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-l",
+  :desc     => "Whether to check for an existing lock on the repository " +
+    "to prevent simultaneous updates "
+
   def upload(*files)
     if files.nil? || files.empty?
       error("You must specify at least one file to upload")
@@ -130,6 +138,19 @@ class Deb::S3::CLI < Thor
 
     # configure AWS::S3
     configure_s3_client
+
+    if options[:lock]
+      log("Checking for existing lock file")
+      if Deb::S3::Lock.locked?(options[:codename], component, options[:arch], options[:cache_control])
+        lock = Deb::S3::Lock.current(options[:codename], component, options[:arch], options[:cache_control])
+        log("Repository is locked by another user: #{lock.user} at host #{lock.host}")
+        log("Attempting to obtain a lock")
+        Deb::S3::Lock.wait_for_lock(options[:codename], component, options[:arch], options[:cache_control])
+      end
+      log("Locking repository for updates")
+      Deb::S3::Lock.lock(options[:codename], component, options[:arch], options[:cache_control])
+    end
+
 
     # retrieve the existing manifests
     log("Retrieving existing manifests")
@@ -192,6 +213,10 @@ class Deb::S3::CLI < Thor
     release.write_to_s3 { |f| sublog("Transferring #{f}") }
 
     log("Update complete.")
+    if options[:lock]
+      Deb::S3::Lock.unlock(options[:codename], component, options[:arch], options[:cache_control])
+      log("Lock released.")
+    end
   end
 
   desc "list", "Lists packages in given codename, component, and optionally architecture"
