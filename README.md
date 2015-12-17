@@ -71,6 +71,7 @@ Options:
                                         # Default: main
       [--access-key-id=ACCESS_KEY]      # The access key for connecting to S3.
       [--secret-access-key=SECRET_KEY]  # The secret key for connecting to S3.
+      [--prefix=PREFIX]                 # The path prefix to use when storing on S3.
   -v, [--visibility=VISIBILITY]         # The access policy for the uploaded files. Can be public, private, or authenticated.
                                         # Default: public
 
@@ -118,6 +119,7 @@ Options:
                                         # Default: main
       [--access-key-id=ACCESS_KEY]      # The access key for connecting to S3.
       [--secret-access-key=SECRET_KEY]  # The secret key for connecting to S3.
+      [--prefix=PREFIX]                 # The path prefix to use when storing on S3.
   -v, [--visibility=VISIBILITY]         # The access policy for the uploaded files. Can be public, private, or authenticated.
                                         # Default: public
 
