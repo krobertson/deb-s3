@@ -425,7 +425,7 @@ class Deb::S3::CLI < Thor
         end
     else
         deleted.each { |p|
-            sublog("Deleting #{p.name} version #{p.version}")
+            sublog("Deleting #{p.name} version #{p.full_version}")
         }
     end
 
