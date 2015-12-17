@@ -10,6 +10,7 @@ require "deb/s3/utils"
 require "deb/s3/manifest"
 require "deb/s3/package"
 require "deb/s3/release"
+require "deb/s3/lock"
 
 class Deb::S3::CLI < Thor
   class_option :bucket,
@@ -118,6 +119,13 @@ class Deb::S3::CLI < Thor
   :desc     => "Whether to preserve other versions of a package " +
     "in the repository when uploading one."
 
+  option :lock,
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-l",
+  :desc     => "Whether to check for an existing lock on the repository " +
+    "to prevent simultaneous updates "
+
   def upload(*files)
     if files.nil? || files.empty?
       error("You must specify at least one file to upload")
@@ -131,67 +139,88 @@ class Deb::S3::CLI < Thor
     # configure AWS::S3
     configure_s3_client
 
-    # retrieve the existing manifests
-    log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite], options[:cache_control])
-    manifests = {}
-    release.architectures.each do |arch|
-      manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
-    end
-
-    packages_arch_all = []
-
-    # examine all the files
-    files.collect { |f| Dir.glob(f) }.flatten.each do |file|
-      log("Examining package file #{File.basename(file)}")
-      pkg = Deb::S3::Package.parse_file(file)
-
-      # copy over some options if they weren't given
-      arch = options[:arch] || pkg.architecture
-
-      # validate we have them
-      error("No architcture given and unable to determine one for #{file}. " +
-            "Please specify one with --arch [i386|amd64].") unless arch
-
-      # If the arch is all and the list of existing manifests is none, then
-      # throw an error. This is mainly the case when initializing a brand new
-      # repository. With "all", we won't know which architectures they're using.
-      if arch == "all" && manifests.count == 0
-        error("Package #{File.basename(file)} had architecture \"all\", " +
-              "however noexisting package lists exist. This can often happen " +
-              "if the first package you are add to a new repository is an " +
-              "\"all\" architecture file. Please use --arch [i386|amd64] or " +
-              "another platform type to upload the file.")
+    begin
+      if options[:lock]
+        log("Checking for existing lock file")
+        if Deb::S3::Lock.locked?(options[:codename], component, options[:arch], options[:cache_control])
+          lock = Deb::S3::Lock.current(options[:codename], component, options[:arch], options[:cache_control])
+          log("Repository is locked by another user: #{lock.user} at host #{lock.host}")
+          log("Attempting to obtain a lock")
+          Deb::S3::Lock.wait_for_lock(options[:codename], component, options[:arch], options[:cache_control])
+        end
+        log("Locking repository for updates")
+        Deb::S3::Lock.lock(options[:codename], component, options[:arch], options[:cache_control])
+        @lock_acquired = true
       end
 
-      # retrieve the manifest for the arch if we don't have it already
-      manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
 
-      # add package in manifests
-      manifests[arch].add(pkg, options[:preserve_versions])
+      # retrieve the existing manifests
+      log("Retrieving existing manifests")
+      release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite], options[:cache_control])
+      manifests = {}
+      release.architectures.each do |arch|
+        manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
+      end
 
-      # If arch is all, we must add this package in all arch available
-      if arch == 'all'
-        packages_arch_all << pkg
+      packages_arch_all = []
+
+      # examine all the files
+      files.collect { |f| Dir.glob(f) }.flatten.each do |file|
+        log("Examining package file #{File.basename(file)}")
+        pkg = Deb::S3::Package.parse_file(file)
+
+        # copy over some options if they weren't given
+        arch = options[:arch] || pkg.architecture
+
+        # validate we have them
+        error("No architcture given and unable to determine one for #{file}. " +
+              "Please specify one with --arch [i386|amd64].") unless arch
+
+        # If the arch is all and the list of existing manifests is none, then
+        # throw an error. This is mainly the case when initializing a brand new
+        # repository. With "all", we won't know which architectures they're using.
+        if arch == "all" && manifests.count == 0
+          error("Package #{File.basename(file)} had architecture \"all\", " +
+                "however noexisting package lists exist. This can often happen " +
+                "if the first package you are add to a new repository is an " +
+                "\"all\" architecture file. Please use --arch [i386|amd64] or " +
+                "another platform type to upload the file.")
+        end
+
+        # retrieve the manifest for the arch if we don't have it already
+        manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control])
+
+        # add package in manifests
+        manifests[arch].add(pkg, options[:preserve_versions])
+
+        # If arch is all, we must add this package in all arch available
+        if arch == 'all'
+          packages_arch_all << pkg
+        end
+      end
+
+      manifests.each do |arch, manifest|
+        next if arch == 'all'
+        packages_arch_all.each do |pkg|
+          manifest.add(pkg, options[:preserve_versions], false)
+        end
+      end
+
+      # upload the manifest
+      log("Uploading packages and new manifests to S3")
+      manifests.each_value do |manifest|
+        manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
+        release.update_manifest(manifest)
+      end
+      release.write_to_s3 { |f| sublog("Transferring #{f}") }
+
+      log("Update complete.")
+    ensure
+      if options[:lock] && @lock_acquired
+        Deb::S3::Lock.unlock(options[:codename], component, options[:arch], options[:cache_control])
+        log("Lock released.")
       end
     end
-
-    manifests.each do |arch, manifest|
-      next if arch == 'all'
-      packages_arch_all.each do |pkg|
-        manifest.add(pkg, options[:preserve_versions], false)
-      end
-    end
-
-    # upload the manifest
-    log("Uploading packages and new manifests to S3")
-    manifests.each_value do |manifest|
-      manifest.write_to_s3 { |f| sublog("Transferring #{f}") }
-      release.update_manifest(manifest)
-    end
-    release.write_to_s3 { |f| sublog("Transferring #{f}") }
-
-    log("Update complete.")
   end
 
   desc "list", "Lists packages in given codename, component, and optionally architecture"
