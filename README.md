@@ -5,7 +5,7 @@
 `deb-s3` is a simple utility to make creating and managing APT repositories on
 S3.
 
-Most existing existing guides on using S3 to host an APT repository have you
+Most existing guides on using S3 to host an APT repository have you
 using something like [reprepro](http://mirrorer.alioth.debian.org/) to generate
 the repository file structure, and then [s3cmd](http://s3tools.org/s3cmd) to
 sync the files to S3.
