@@ -64,7 +64,7 @@ class Deb::S3::CLI < Thor
   class_option :force_path_style,
   :default  => false,
   :type     => :boolean,
-  :desc     => "Use S3 path style instead on subdomains."
+  :desc     => "Use S3 path style instead of subdomains."
 
   class_option :proxy_uri,
   :type     => :string,
