@@ -177,6 +177,11 @@ class Deb::S3::CLI < Thor
         # copy over some options if they weren't given
         arch = options[:arch] || pkg.architecture
 
+        # If they've specified an arch type that doesn't match the package let them know
+        if options.key?("arch") && options[:arch] != pkg.architecture
+          warn("You specified architecture #{options[:arch]} but package #{pkg.name} has architecture type of #{pkg.architecture}") 
+        end
+
         # validate we have them
         error("No architcture given and unable to determine one for #{file}. " +
               "Please specify one with --arch [i386|amd64].") unless arch
