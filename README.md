@@ -61,32 +61,33 @@ Usage:
   deb-s3 upload FILES
 
 Options:
-  -a, [--arch=ARCH]                            # The architecture of the package in the APT repository.
-  -p, [--preserve-versions]                    # Whether to preserve other versions of a package in the repository when uploading one.
-  -l, [--lock]                                 # Whether to check for an existing lock on the repository to prevent simultaneous updates 
-      [--fail-if-exists]                       # Whether to overwrite any existing package that has the same filename in the pool or the same name and version in the manifest.
-  -b, [--bucket=BUCKET]                        # The name of the S3 bucket to upload to.
-      [--prefix=PREFIX]                        # The path prefix to use when storing on S3.
-  -o, [--origin=ORIGIN]                        # The origin to use in the repository Release file.
-      [--suite=SUITE]                          # The suite to use in the repository Release file.
-  -c, [--codename=CODENAME]                    # The codename of the APT repository.
-                                               # Default: stable
-  -m, [--component=COMPONENT]                  # The component of the APT repository.
-                                               # Default: main
-      [--access-key-id=ACCESS_KEY_ID]          # The access key for connecting to S3.
-      [--secret-access-key=SECRET_ACCESS_KEY]  # The secret key for connecting to S3.
-      [--endpoint=ENDPOINT]                    # The region endpoint for connecting to S3.
-                                               # Default: s3.amazonaws.com
-      [--proxy-uri=PROXY_URI]                  # The URI of the proxy to send service requests through.
-      [--use-ssl]                              # Whether to use HTTP or HTTPS for request transport.
-                                               # Default: true
-  -v, [--visibility=VISIBILITY]                # The access policy for the uploaded files. Can be public, private, or authenticated.
-                                               # Default: public
-      [--sign=SIGN]                            # Sign the Release file when uploading a package, or when verifying it after removing a package. Use --sign with your key ID to use a specific key.
-      [--gpg-options=GPG_OPTIONS]              # Additional command line options to pass to GPG when signing.
-  -e, [--encryption]                           # Use S3 server side encryption.
-  -q, [--quiet]                                # Doesn't output information, just returns status appropriately.
-  -C, [--cache-control=CACHE_CONTROL]          # Add cache-control headers to S3 objects.
+  -a, [--arch=ARCH]                                    # The architecture of the package in the APT repository.
+  -p, [--preserve-versions], [--no-preserve-versions]  # Whether to preserve other versions of a package in the repository when uploading one.
+  -l, [--lock], [--no-lock]                            # Whether to check for an existing lock on the repository to prevent simultaneous updates
+      [--fail-if-exists], [--no-fail-if-exists]        # Whether to overwrite any existing package that has the same filename in the pool or the same name and version in the manifest.
+  -b, [--bucket=BUCKET]                                # The name of the S3 bucket to upload to.
+      [--prefix=PREFIX]                                # The path prefix to use when storing on S3.
+  -o, [--origin=ORIGIN]                                # The origin to use in the repository Release file.
+      [--suite=SUITE]                                  # The suite to use in the repository Release file.
+  -c, [--codename=CODENAME]                            # The codename of the APT repository.
+                                                       # Default: stable
+  -m, [--component=COMPONENT]                          # The component of the APT repository.
+                                                       # Default: main
+      [--access-key-id=ACCESS_KEY_ID]                  # The access key for connecting to S3.
+      [--secret-access-key=SECRET_ACCESS_KEY]          # The secret key for connecting to S3.
+      [--endpoint=ENDPOINT]                            # The region endpoint for connecting to S3.
+                                                       # Default: s3.amazonaws.com
+      [--force-path-style], [--no-force-path-style]    # Use S3 path style instead of subdomains.
+      [--proxy-uri=PROXY_URI]                          # The URI of the proxy to send service requests through.
+      [--use-ssl], [--no-use-ssl]                      # Whether to use HTTP or HTTPS for request transport.
+                                                       # Default: true
+  -v, [--visibility=VISIBILITY]                        # The access policy for the uploaded files. Can be public, private, or authenticated.
+                                                       # Default: public
+      [--sign=SIGN]                                    # Sign the Release file when uploading a package, or when verifying it after removing a package. Use --sign with your key ID to use a specific key.
+      [--gpg-options=GPG_OPTIONS]                      # Additional command line options to pass to GPG when signing.
+  -e, [--encryption], [--no-encryption]                # Use S3 server side encryption.
+  -q, [--quiet], [--no-quiet]                          # Doesn't output information, just returns status appropriately.
+  -C, [--cache-control=CACHE_CONTROL]                  # Add cache-control headers to S3 objects.
 
 Uploads the given files to a S3 bucket as an APT repository.
 ```
@@ -112,31 +113,31 @@ Usage:
   deb-s3 delete PACKAGE
 
 Options:
-  -a, [--arch=ARCH]                            # The architecture of the package in the APT repository.
-      [--versions=one two three]               # The space-delimited versions of PACKAGE to delete. If not specified, ALL VERSIONS will be deleted. Fair warning. E.g. --versions "0.1 0.2 0.3"
-  -l, [--lock]                                 # Whether to check for an existing lock on the repository to prevent simultaneous updates 
-  -b, [--bucket=BUCKET]                        # The name of the S3 bucket to upload to.
-      [--prefix=PREFIX]                        # The path prefix to use when storing on S3.
-  -o, [--origin=ORIGIN]                        # The origin to use in the repository Release file.
-      [--suite=SUITE]                          # The suite to use in the repository Release file.
-  -c, [--codename=CODENAME]                    # The codename of the APT repository.
-                                               # Default: stable
-  -m, [--component=COMPONENT]                  # The component of the APT repository.
-                                               # Default: main
-      [--access-key-id=ACCESS_KEY_ID]          # The access key for connecting to S3.
-      [--secret-access-key=SECRET_ACCESS_KEY]  # The secret key for connecting to S3.
-      [--endpoint=ENDPOINT]                    # The region endpoint for connecting to S3.
-                                               # Default: s3.amazonaws.com
-      [--proxy-uri=PROXY_URI]                  # The URI of the proxy to send service requests through.
-      [--use-ssl]                              # Whether to use HTTP or HTTPS for request transport.
-                                               # Default: true
-  -v, [--visibility=VISIBILITY]                # The access policy for the uploaded files. Can be public, private, or authenticated.
-                                               # Default: public
-      [--sign=SIGN]                            # Sign the Release file when uploading a package, or when verifying it after removing a package. Use --sign with your key ID to use a specific key.
-      [--gpg-options=GPG_OPTIONS]              # Additional command line options to pass to GPG when signing.
-  -e, [--encryption]                           # Use S3 server side encryption.
-  -q, [--quiet]                                # Doesn't output information, just returns status appropriately.
-  -C, [--cache-control=CACHE_CONTROL]          # Add cache-control headers to S3 objects.
+  -a, [--arch=ARCH]                                  # The architecture of the package in the APT repository.
+      [--versions=one two three]                     # The space-delimited versions of PACKAGE to delete. If not specified, ALL VERSIONS will be deleted. Fair warning. E.g. --versions "0.1 0.2 0.3"
+  -b, [--bucket=BUCKET]                              # The name of the S3 bucket to upload to.
+      [--prefix=PREFIX]                              # The path prefix to use when storing on S3.
+  -o, [--origin=ORIGIN]                              # The origin to use in the repository Release file.
+      [--suite=SUITE]                                # The suite to use in the repository Release file.
+  -c, [--codename=CODENAME]                          # The codename of the APT repository.
+                                                     # Default: stable
+  -m, [--component=COMPONENT]                        # The component of the APT repository.
+                                                     # Default: main
+      [--access-key-id=ACCESS_KEY_ID]                # The access key for connecting to S3.
+      [--secret-access-key=SECRET_ACCESS_KEY]        # The secret key for connecting to S3.
+      [--endpoint=ENDPOINT]                          # The region endpoint for connecting to S3.
+                                                     # Default: s3.amazonaws.com
+      [--force-path-style], [--no-force-path-style]  # Use S3 path style instead of subdomains.
+      [--proxy-uri=PROXY_URI]                        # The URI of the proxy to send service requests through.
+      [--use-ssl], [--no-use-ssl]                    # Whether to use HTTP or HTTPS for request transport.
+                                                     # Default: true
+  -v, [--visibility=VISIBILITY]                      # The access policy for the uploaded files. Can be public, private, or authenticated.
+                                                     # Default: public
+      [--sign=SIGN]                                  # Sign the Release file when uploading a package, or when verifying it after removing a package. Use --sign with your key ID to use a specific key.
+      [--gpg-options=GPG_OPTIONS]                    # Additional command line options to pass to GPG when signing.
+  -e, [--encryption], [--no-encryption]              # Use S3 server side encryption.
+  -q, [--quiet], [--no-quiet]                        # Doesn't output information, just returns status appropriately.
+  -C, [--cache-control=CACHE_CONTROL]                # Add cache-control headers to S3 objects.
 
 Remove the package named PACKAGE. If --versions is not specified, deleteall versions of PACKAGE. Otherwise, only the specified versions will be deleted.
 ```
@@ -156,30 +157,30 @@ Usage:
   deb-s3 verify
 
 Options:
-  -f, [--fix-manifests]                        # Whether to fix problems in manifests when verifying.
-  -b, [--bucket=BUCKET]                        # The name of the S3 bucket to upload to.
-      [--prefix=PREFIX]                        # The path prefix to use when storing on S3.
-  -o, [--origin=ORIGIN]                        # The origin to use in the repository Release file.
-      [--suite=SUITE]                          # The suite to use in the repository Release file.
-  -c, [--codename=CODENAME]                    # The codename of the APT repository.
-                                               # Default: stable
-  -m, [--component=COMPONENT]                  # The component of the APT repository.
-                                               # Default: main
-      [--access-key-id=ACCESS_KEY_ID]          # The access key for connecting to S3.
-      [--secret-access-key=SECRET_ACCESS_KEY]  # The secret key for connecting to S3.
-      [--endpoint=ENDPOINT]                    # The region endpoint for connecting to S3.
-                                               # Default: s3.amazonaws.com
-      [--proxy-uri=PROXY_URI]                  # The URI of the proxy to send service requests through.
-      [--use-ssl]                              # Whether to use HTTP or HTTPS for request transport.
-                                               # Default: true
-  -v, [--visibility=VISIBILITY]                # The access policy for the uploaded files. Can be public, private, or authenticated.
-                                               # Default: public
-      [--sign=SIGN]                            # Sign the Release file when uploading a package, or when verifying it after removing a package. Use --sign with your key ID to use a specific key.
-      [--gpg-options=GPG_OPTIONS]              # Additional command line options to pass to GPG when signing.
-  -e, [--encryption]                           # Use S3 server side encryption.
-  -q, [--quiet]                                # Doesn't output information, just returns status appropriately.
-  -C, [--cache-control=CACHE_CONTROL]          # Add cache-control headers to S3 objects.
+  -f, [--fix-manifests], [--no-fix-manifests]        # Whether to fix problems in manifests when verifying.
+  -b, [--bucket=BUCKET]                              # The name of the S3 bucket to upload to.
+      [--prefix=PREFIX]                              # The path prefix to use when storing on S3.
+  -o, [--origin=ORIGIN]                              # The origin to use in the repository Release file.
+      [--suite=SUITE]                                # The suite to use in the repository Release file.
+  -c, [--codename=CODENAME]                          # The codename of the APT repository.
+                                                     # Default: stable
+  -m, [--component=COMPONENT]                        # The component of the APT repository.
+                                                     # Default: main
+      [--access-key-id=ACCESS_KEY_ID]                # The access key for connecting to S3.
+      [--secret-access-key=SECRET_ACCESS_KEY]        # The secret key for connecting to S3.
+      [--endpoint=ENDPOINT]                          # The region endpoint for connecting to S3.
+                                                     # Default: s3.amazonaws.com
+      [--force-path-style], [--no-force-path-style]  # Use S3 path style instead of subdomains.
+      [--proxy-uri=PROXY_URI]                        # The URI of the proxy to send service requests through.
+      [--use-ssl], [--no-use-ssl]                    # Whether to use HTTP or HTTPS for request transport.
+                                                     # Default: true
+  -v, [--visibility=VISIBILITY]                      # The access policy for the uploaded files. Can be public, private, or authenticated.
+                                                     # Default: public
+      [--sign=SIGN]                                  # Sign the Release file when uploading a package, or when verifying it after removing a package. Use --sign with your key ID to use a specific key.
+      [--gpg-options=GPG_OPTIONS]                    # Additional command line options to pass to GPG when signing.
+  -e, [--encryption], [--no-encryption]              # Use S3 server side encryption.
+  -q, [--quiet], [--no-quiet]                        # Doesn't output information, just returns status appropriately.
+  -C, [--cache-control=CACHE_CONTROL]                # Add cache-control headers to S3 objects.
 
 Verifies that the files in the package manifests exist
 ```
-
