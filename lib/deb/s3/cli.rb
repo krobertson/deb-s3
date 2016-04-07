@@ -61,6 +61,11 @@ class Deb::S3::CLI < Thor
   :desc     => "The region endpoint for connecting to S3.",
   :default  => "s3.amazonaws.com"
 
+  class_option :force_path_style,
+  :default  => false,
+  :type     => :boolean,
+  :desc     => "Use S3 path style instead of subdomains."
+
   class_option :proxy_uri,
   :type     => :string,
   :desc     => "The URI of the proxy to send service requests through."
@@ -570,7 +575,8 @@ class Deb::S3::CLI < Thor
     settings = {
       :s3_endpoint => options[:endpoint],
       :proxy_uri   => options[:proxy_uri],
-      :use_ssl     => options[:use_ssl]
+      :use_ssl     => options[:use_ssl],
+      :s3_force_path_style => options[:force_path_style]
     }
     settings.merge!(provider.credentials)
 
