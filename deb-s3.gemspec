@@ -10,6 +10,7 @@ Gem::Specification.new do |gem|
   gem.homepage    = "http://invalidlogic.com/"
   gem.summary     = "Easily create and manage an APT repository on S3."
   gem.description = gem.summary
+  gem.license     = "MIT"
   gem.executables = "deb-s3"
 
   gem.files = Dir["**/*"].select { |d| d =~ %r{^(README|bin/|ext/|lib/)} }
@@ -18,6 +19,6 @@ Gem::Specification.new do |gem|
 
   gem.add_dependency "thor",    "~> 0.19.0"
   gem.add_dependency "aws-sdk", "~> 1.66"
-  gem.add_development_dependency "minitest"
-  gem.add_development_dependency "rake"
+  gem.add_development_dependency "minitest", "~> 5"
+  gem.add_development_dependency "rake", "~> 11"
 end
