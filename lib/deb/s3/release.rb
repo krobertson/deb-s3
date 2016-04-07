@@ -130,7 +130,7 @@ class Deb::S3::Release
   def validate_others
     to_apply = []
     self.components.each do |comp|
-      %w(amd64 i386).each do |arch|
+      %w(amd64 i386 armhf).each do |arch|
         next if self.files.has_key?("#{comp}/binary-#{arch}/Packages")
 
         m = Deb::S3::Manifest.new
