@@ -56,7 +56,15 @@ class Deb::S3::Manifest
 
   def add(pkg, preserve_versions, needs_uploading=true)
     if self.fail_if_exists
-      packages.each { |p| raise AlreadyExistsError, "package #{pkg.name}_#{pkg.full_version} already exists with different filename (#{p.url_filename})" if p.name == pkg.name && p.full_version == pkg.full_version && File.basename(p.url_filename) != File.basename(pkg.filename) }
+      packages.each { |p|
+        next unless p.name == pkg.name && \
+                    p.full_version == pkg.full_version && \
+                    File.basename(p.url_filename) != \
+                    File.basename(pkg.url_filename)
+        raise AlreadyExistsError,
+              "package #{pkg.name}_#{pkg.full_version} already exists " \
+              "with different filename (#{p.url_filename})"
+      }
     end
     if preserve_versions
       packages.delete_if { |p| p.name == pkg.name && p.full_version == pkg.full_version }
