@@ -357,6 +357,13 @@ class Deb::S3::CLI < Thor
   :desc     => "Whether to overwrite any existing package that has the same " +
     "filename in the pool or the same name and version in the manifest."
 
+  option :lock,
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-l",
+  :desc     => "Whether to check for an existing lock on the repository " +
+    "to prevent simultaneous updates "
+
   def copy(package_name, to_codename, to_component)
     if package_name.nil?
       error "You must specify a package name."
@@ -467,6 +474,13 @@ class Deb::S3::CLI < Thor
     "specified, ALL VERSIONS will be deleted. Fair warning. " +
     "E.g. --versions \"0.1 0.2 0.3\""
 
+  option :lock,
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-l",
+  :desc     => "Whether to check for an existing lock on the repository " +
+    "to prevent simultaneous updates "
+
   def delete(package)
     if package.nil?
       error("You must specify a package name.")
@@ -539,6 +553,13 @@ class Deb::S3::CLI < Thor
   :type     => :boolean,
   :aliases  => "-f",
   :desc     => "Whether to fix problems in manifests when verifying."
+
+  option :lock,
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-l",
+  :desc     => "Whether to check for an existing lock on the repository " +
+    "to prevent simultaneous updates "
 
   def verify
     configure_s3_client
