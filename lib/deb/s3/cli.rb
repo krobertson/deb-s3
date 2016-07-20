@@ -404,7 +404,7 @@ class Deb::S3::CLI < Thor
         Deb::S3::Lock.lock(options[:codename], component, options[:arch], options[:cache_control])
 
         if Deb::S3::Lock.locked?(to_codename, to_component, options[:arch], options[:cache_control])
-          lock = Deb::S3::Lock.current(to_code  , to_component, options[:arch], options[:cache_control])
+          lock = Deb::S3::Lock.current(to_codename, to_component, options[:arch], options[:cache_control])
           log("Repository is locked by another user: #{lock.user} at host #{lock.host}")
           log("Attempting to obtain a lock")
           Deb::S3::Lock.wait_for_lock(to_code, to_component, options[:arch], options[:cache_control])
@@ -452,7 +452,8 @@ class Deb::S3::CLI < Thor
     ensure
       if options[:lock] && @lock_acquired
         Deb::S3::Lock.unlock(options[:codename], component, options[:arch], options[:cache_control])
-        log("Lock released.")
+        Deb::S3::Lock.unlock(to_codename, to_component, options[:arch], options[:cache_control])
+        log("Locks released.")
       end
     end
   end
