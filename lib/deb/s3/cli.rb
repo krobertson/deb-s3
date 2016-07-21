@@ -207,6 +207,7 @@ class Deb::S3::CLI < Thor
 
         # add package in manifests
         begin
+          log("Adding package: #{pkg.name} to the #{arch} manifest")
           manifests[arch].add(pkg, options[:preserve_versions])
         rescue Deb::S3::Utils::AlreadyExistsError => e
           error("Preparing manifest failed because: #{e}")
@@ -222,6 +223,7 @@ class Deb::S3::CLI < Thor
         next if arch == 'all'
         packages_arch_all.each do |pkg|
           begin
+            log("Adding package: #{pkg.name} to the #{arch} manifest")
             manifest.add(pkg, options[:preserve_versions], false)
           rescue Deb::S3::Utils::AlreadyExistsError => e
             error("Preparing manifest failed because: #{e}")
@@ -434,6 +436,7 @@ class Deb::S3::CLI < Thor
 
       packages.each do |package|
         begin
+          log("Adding package: #{package.name} to the #{arch} manifest")
           to_manifest.add package, options[:preserve_versions], false
         rescue Deb::S3::Utils::AlreadyExistsError => e
           error("Preparing manifest failed because: #{e}")
