@@ -12,6 +12,7 @@ class Deb::S3::Manifest
   attr_accessor :cache_control
   attr_accessor :architecture
   attr_accessor :fail_if_exists
+  attr_accessor :skip_package_upload
 
   attr_accessor :files
 
@@ -26,10 +27,11 @@ class Deb::S3::Manifest
     @files = {}
     @cache_control = ""
     @fail_if_exists = false
+    @skip_package_upload = false
   end
 
   class << self
-    def retrieve(codename, component, architecture, cache_control, fail_if_exists)
+    def retrieve(codename, component, architecture, cache_control, fail_if_exists, skip_package_upload)
       m = if s = Deb::S3::Utils.s3_read("dists/#{codename}/#{component}/binary-#{architecture}/Packages")
         self.parse_packages(s)
       else
@@ -41,6 +43,7 @@ class Deb::S3::Manifest
       m.architecture = architecture
       m.cache_control = cache_control
       m.fail_if_exists = fail_if_exists
+      m.skip_package_upload = skip_package_upload
       m
     end
 
@@ -99,10 +102,12 @@ class Deb::S3::Manifest
   def write_to_s3
     manifest = self.generate
 
-    # store any packages that need to be stored
-    @packages_to_be_upload.each do |pkg|
-      yield pkg.url_filename if block_given?
-      s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary', self.cache_control, self.fail_if_exists)
+    unless self.skip_package_upload
+      # store any packages that need to be stored
+      @packages_to_be_upload.each do |pkg|
+        yield pkg.url_filename if block_given?
+        s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary', self.cache_control, self.fail_if_exists)
+      end
     end
 
     # generate the Packages file
