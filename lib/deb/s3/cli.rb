@@ -137,6 +137,12 @@ class Deb::S3::CLI < Thor
   :desc     => "Whether to overwrite any existing package that has the same " +
     "filename in the pool or the same name and version in the manifest."
 
+  option :skip_package_upload,
+  :default  => false,
+  :type     => :boolean,
+  :desc     => "Whether to skip all package uploads." +
+    "This is useful when hosting .deb files outside of the bucket."
+
   def upload(*files)
     if files.nil? || files.empty?
       error("You must specify at least one file to upload")
@@ -169,7 +175,7 @@ class Deb::S3::CLI < Thor
       release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite], options[:cache_control])
       manifests = {}
       release.architectures.each do |arch|
-        manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control], options[:fail_if_exists])
+        manifests[arch] = Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control], options[:fail_if_exists], options[:skip_package_upload])
       end
 
       packages_arch_all = []
