@@ -125,7 +125,7 @@ class Deb::S3::CLI < Thor
     "in the repository when uploading one."
 
   option :lock,
-  :default  => false,
+  :default  => true,
   :type     => :boolean,
   :aliases  => "-l",
   :desc     => "Whether to check for an existing lock on the repository " +
