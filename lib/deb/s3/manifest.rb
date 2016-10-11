@@ -31,7 +31,7 @@ class Deb::S3::Manifest
   end
 
   class << self
-    def retrieve(codename, component, architecture, cache_control, fail_if_exists, skip_package_upload)
+    def retrieve(codename, component, architecture, cache_control, fail_if_exists, skip_package_upload=false)
       m = if s = Deb::S3::Utils.s3_read("dists/#{codename}/#{component}/binary-#{architecture}/Packages")
         self.parse_packages(s)
       else
