@@ -409,7 +409,7 @@ class Deb::S3::CLI < Thor
           lock = Deb::S3::Lock.current(to_codename, to_component, options[:arch], options[:cache_control])
           log("Repository is locked by another user: #{lock.user} at host #{lock.host}")
           log("Attempting to obtain a lock")
-          Deb::S3::Lock.wait_for_lock(to_code, to_component, options[:arch], options[:cache_control])
+          Deb::S3::Lock.wait_for_lock(to_codename, to_component, options[:arch], options[:cache_control])
         end
         log("Locking repository #{to_codename} for copying")
         Deb::S3::Lock.lock(to_codename, to_component, options[:arch], options[:cache_control])
