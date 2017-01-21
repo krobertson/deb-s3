@@ -31,10 +31,10 @@ class Deb::S3::Release
         rel = self.parse_release(s)
       else
         rel = self.new
-        rel.codename = codename
-        rel.origin = origin unless origin.nil?
-        rel.suite = suite unless suite.nil?
       end
+      rel.codename = codename
+      rel.origin = origin unless origin.nil?
+      rel.suite = suite unless suite.nil?
       rel.cache_control = cache_control
       rel
     end
