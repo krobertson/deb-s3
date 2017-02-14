@@ -595,13 +595,13 @@ class Deb::S3::CLI < Thor
     Deb::S3::Utils.access_policy =
       case options[:visibility]
       when "public"
-        :public_read
+        "public-read"
       when "private"
-        :private
+        "private"
       when "authenticated"
-        :authenticated_read
+        "authenticated-read"
       when "bucket_owner"
-        :bucket_owner_full_control
+        "bucket-owner-full-control"
       else
         error("Invalid visibility setting given. Can be public, private, authenticated, or bucket_owner.")
       end
