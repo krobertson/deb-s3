@@ -1,5 +1,5 @@
 # -*- encoding : utf-8 -*-
-require "aws"
+require "aws-sdk"
 require "thor"
 
 # Hack: aws requires this!
@@ -56,10 +56,10 @@ class Deb::S3::CLI < Thor
   :type     => :string,
   :desc     => "The secret key for connecting to S3."
 
-  class_option :endpoint,
+  class_option :s3_region,
   :type     => :string,
-  :desc     => "The region endpoint for connecting to S3.",
-  :default  => "s3.amazonaws.com"
+  :desc     => "The region for connecting to S3.",
+  :default  => "us-east-1"
 
   class_option :force_path_style,
   :default  => false,
@@ -70,10 +70,10 @@ class Deb::S3::CLI < Thor
   :type     => :string,
   :desc     => "The URI of the proxy to send service requests through."
 
-  class_option :use_ssl,
-  :default  => true,
-  :type     => :boolean,
-  :desc     => "Whether to use HTTP or HTTPS for request transport."
+  #class_option :use_ssl,
+  #:default  => true,
+  #:type     => :boolean,
+  #:desc     => "Whether to use HTTP or HTTPS for request transport."
 
   class_option :visibility,
   :default  => "public",
@@ -567,26 +567,24 @@ class Deb::S3::CLI < Thor
     if access_key_id.nil? ^ secret_access_key.nil?
       error("If you specify one of --access-key-id or --secret-access-key, you must specify the other.")
     end
-
     static_credentials = {}
     static_credentials[:access_key_id]     = access_key_id     if access_key_id
     static_credentials[:secret_access_key] = secret_access_key if secret_access_key
 
-    AWS::Core::CredentialProviders::DefaultProvider.new(static_credentials)
+    static_credentials
   end
 
   def configure_s3_client
     error("No value provided for required options '--bucket'") unless options[:bucket]
 
     settings = {
-      :s3_endpoint => options[:endpoint],
-      :proxy_uri   => options[:proxy_uri],
-      :use_ssl     => options[:use_ssl],
-      :s3_force_path_style => options[:force_path_style]
+      :region => options[:s3_region],
+      :http_proxy   => options[:proxy_uri],
+      :force_path_style => options[:force_path_style]
     }
-    settings.merge!(provider.credentials)
+    settings.merge!(provider)
 
-    Deb::S3::Utils.s3          = AWS::S3.new(settings)
+    Deb::S3::Utils.s3          = Aws::S3::Client.new(settings)
     Deb::S3::Utils.bucket      = options[:bucket]
     Deb::S3::Utils.signing_key = options[:sign]
     Deb::S3::Utils.gpg_options = options[:gpg_options]
@@ -597,13 +595,13 @@ class Deb::S3::CLI < Thor
     Deb::S3::Utils.access_policy =
       case options[:visibility]
       when "public"
-        :public_read
+        "public-read"
       when "private"
-        :private
+        "private"
       when "authenticated"
-        :authenticated_read
+        "authenticated-read"
       when "bucket_owner"
-        :bucket_owner_full_control
+        "bucket-owner-full-control"
       else
         error("Invalid visibility setting given. Can be public, private, authenticated, or bucket_owner.")
       end

@@ -103,15 +103,28 @@ class Deb::S3::Release
     # sign the file, if necessary
     if Deb::S3::Utils.signing_key
       key_param = Deb::S3::Utils.signing_key != "" ? "--default-key=#{Deb::S3::Utils.signing_key}" : ""
-      if system("gpg -a #{key_param} #{Deb::S3::Utils.gpg_options} -b #{release_tmp.path}")
-        local_file = release_tmp.path+".asc"
-        remote_file = self.filename+".gpg"
-        yield remote_file if block_given?
-        raise "Unable to locate Release signature file" unless File.exists?(local_file)
-        s3_store(local_file, remote_file, 'application/pgp-signature; charset=us-ascii', self.cache_control)
-        File.unlink(local_file)
+      if self.codename == "xenial"
+        if system("gpg -a #{key_param} #{Deb::S3::Utils.gpg_options} -s --clearsign #{release_tmp.path}")
+          local_file = release_tmp.path+".asc"
+          remote_file = "dists/#{@codename}/InRelease"
+          yield remote_file if block_given?
+          raise "Unable to locate InRelease file" unless File.exists?(local_file)
+          s3_store(local_file, remote_file, 'application/pgp-signature; charset=us-ascii', self.cache_control)
+          File.unlink(local_file)
+        else
+          raise "Signing the InRelease file failed."
+        end
       else
-        raise "Signing the Release file failed."
+        if system("gpg -a #{key_param} #{Deb::S3::Utils.gpg_options} -b #{release_tmp.path}")
+          local_file = release_tmp.path+".asc"
+          remote_file = self.filename+".gpg"
+          yield remote_file if block_given?
+          raise "Unable to locate Release signature file" unless File.exists?(local_file)
+          s3_store(local_file, remote_file, 'application/pgp-signature; charset=us-ascii', self.cache_control)
+          File.unlink(local_file)
+        else
+          raise "Signing the Release file failed."
+        end
       end
     else
       # remove an existing Release.gpg, if it was there
