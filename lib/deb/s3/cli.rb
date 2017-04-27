@@ -442,6 +442,13 @@ class Deb::S3::CLI < Thor
     "specified, ALL VERSIONS will be deleted. Fair warning. " +
     "E.g. --versions \"0.1 0.2 0.3\""
 
+  option :lock,
+  :default  => false,
+  :type     => :boolean,
+  :aliases  => "-l",
+  :desc     => "Whether to check for an existing lock on the repository " +
+    "to prevent simultaneous updates "
+
   def delete(package)
     if package.nil?
       error("You must specify a package name.")
@@ -461,30 +468,50 @@ class Deb::S3::CLI < Thor
 
     configure_s3_client
 
-    # retrieve the existing manifests
-    log("Retrieving existing manifests")
-    release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control], false)
-
-    deleted = manifest.delete_package(package, versions)
-    if deleted.length == 0
-        if versions.nil?
-            error("No packages were deleted. #{package} not found.")
-        else
-            error("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found.")
+    begin
+      if options[:lock]
+        log("Checking for existing lock file")
+        if Deb::S3::Lock.locked?(options[:codename], component, options[:arch], options[:cache_control])
+          lock = Deb::S3::Lock.current(options[:codename], component, options[:arch], options[:cache_control])
+          log("Repository is locked by another user: #{lock.user} at host #{lock.host}")
+          log("Attempting to obtain a lock")
+          Deb::S3::Lock.wait_for_lock(options[:codename], component, options[:arch], options[:cache_control])
         end
-    else
-        deleted.each { |p|
-            sublog("Deleting #{p.name} version #{p.full_version}")
-        }
+        log("Locking repository for updates")
+        Deb::S3::Lock.lock(options[:codename], component, options[:arch], options[:cache_control])
+        @lock_acquired = true
+      end
+
+      # retrieve the existing manifests
+      log("Retrieving existing manifests")
+      release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control], false)
+
+      deleted = manifest.delete_package(package, versions)
+      if deleted.length == 0
+          if versions.nil?
+              error("No packages were deleted. #{package} not found.")
+          else
+              error("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found.")
+          end
+      else
+          deleted.each { |p|
+              sublog("Deleting #{p.name} version #{p.full_version}")
+          }
+      end
+
+      log("Uploading new manifests to S3")
+      manifest.write_to_s3 {|f| sublog("Transferring #{f}") }
+      release.update_manifest(manifest)
+      release.write_to_s3 {|f| sublog("Transferring #{f}") }
+
+      log("Update complete.")
+    ensure
+      if options[:lock] && @lock_acquired
+        Deb::S3::Lock.unlock(options[:codename], component, options[:arch], options[:cache_control])
+        log("Lock released.")
+      end
     end
-
-    log("Uploading new manifests to S3")
-    manifest.write_to_s3 {|f| sublog("Transferring #{f}") }
-    release.update_manifest(manifest)
-    release.write_to_s3 {|f| sublog("Transferring #{f}") }
-
-    log("Update complete.")
   end
 
 
