@@ -84,9 +84,9 @@ class Deb::S3::CLI < Thor
 
   class_option :sign,
   :type     => :string,
-  :desc     => "Sign the Release file when uploading a package, " +
+  :desc     => "GPG Sign the Release file when uploading a package, " +
     "or when verifying it after removing a package. " +
-    "Use --sign with your key ID to use a specific key."
+    "Use --sign with your GPG key ID to use a specific key (--sign=6643C242C18FE05B)."
 
   class_option :gpg_options,
   :default => "",
@@ -190,7 +190,7 @@ class Deb::S3::CLI < Thor
 
         # If they've specified an arch type that doesn't match the package let them know
         if options.key?("arch") && options[:arch] != pkg.architecture
-          warn("You specified architecture #{options[:arch]} but package #{pkg.name} has architecture type of #{pkg.architecture}") 
+          warn("You specified architecture #{options[:arch]} but package #{pkg.name} has architecture type of #{pkg.architecture}")
         end
 
         # validate we have them
