@@ -209,7 +209,7 @@ class Deb::S3::CLI < Thor
         end
 
         # retrieve the manifest for the arch if we don't have it already
-        manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control], options[:fail_if_exists])
+        manifests[arch] ||= Deb::S3::Manifest.retrieve(options[:codename], component, arch, options[:cache_control], options[:fail_if_exists], options[:skip_package_upload])
 
         # add package in manifests
         begin
@@ -279,7 +279,7 @@ class Deb::S3::CLI < Thor
     rows = archs.map { |arch|
       manifest = Deb::S3::Manifest.retrieve(options[:codename], component,
                                             arch, options[:cache_control],
-                                            false)
+                                            false, false)
       manifest.packages.map do |package|
         if options[:long]
           package.generate
@@ -319,7 +319,7 @@ class Deb::S3::CLI < Thor
 
     # retrieve the existing manifests
     manifest = Deb::S3::Manifest.retrieve(options[:codename], component, arch,
-                                          options[:cache_control], false)
+                                          options[:cache_control], false, false)
     package = manifest.packages.detect { |p|
       p.name == package_name && p.full_version == version
     }
@@ -393,11 +393,12 @@ class Deb::S3::CLI < Thor
     from_manifest = Deb::S3::Manifest.retrieve(options[:codename],
                                                component, arch,
                                                options[:cache_control],
-                                               false)
+                                               false, options[:skip_package_upload])
     to_release = Deb::S3::Release.retrieve(to_codename)
     to_manifest = Deb::S3::Manifest.retrieve(to_codename, to_component, arch,
                                              options[:cache_control],
-                                             options[:fail_if_exists])
+                                             options[:fail_if_exists],
+                                             options[:skip_package_upload])
     packages = from_manifest.packages.select { |p|
       p.name == package_name &&
         (versions.nil? || versions.include?(p.full_version))
@@ -464,7 +465,7 @@ class Deb::S3::CLI < Thor
     # retrieve the existing manifests
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control], false)
+    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control], false, options[:skip_package_upload])
 
     deleted = manifest.delete_package(package, versions)
     if deleted.length == 0
@@ -505,7 +506,8 @@ class Deb::S3::CLI < Thor
     release.architectures.each do |arch|
       log("Checking for missing packages in: #{options[:codename]}/#{options[:component]} #{arch}")
       manifest = Deb::S3::Manifest.retrieve(options[:codename], component,
-                                            arch, options[:cache_control], false)
+                                            arch, options[:cache_control], false,
+                                            options[:skip_package_upload])
       missing_packages = []
 
       manifest.packages.each do |p|
