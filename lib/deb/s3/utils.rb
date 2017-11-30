@@ -97,7 +97,7 @@ module Deb::S3::Utils
     end
 
     # specify if encryption is required
-    options[:server_side_encryption] = :aes256 if Deb::S3::Utils.encryption
+    options[:server_side_encryption] = "AES256" if Deb::S3::Utils.encryption
 
     # upload the file
     File.open(path) do |f|
