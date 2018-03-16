@@ -56,6 +56,10 @@ class Deb::S3::CLI < Thor
   :type     => :string,
   :desc     => "The secret key for connecting to S3."
 
+  class_option :session_token,
+  :type     => :string,
+  :desc     => "The (optional) session token for connecting to S3."
+
   class_option :s3_region,
   :type     => :string,
   :desc     => "The region for connecting to S3.",
@@ -565,6 +569,7 @@ class Deb::S3::CLI < Thor
   def provider
     access_key_id     = options[:access_key_id]
     secret_access_key = options[:secret_access_key]
+    session_token     = options[:session_token]
 
     if access_key_id.nil? ^ secret_access_key.nil?
       error("If you specify one of --access-key-id or --secret-access-key, you must specify the other.")
@@ -572,6 +577,7 @@ class Deb::S3::CLI < Thor
     static_credentials = {}
     static_credentials[:access_key_id]     = access_key_id     if access_key_id
     static_credentials[:secret_access_key] = secret_access_key if secret_access_key
+    static_credentials[:session_token]     = session_token     if session_token
 
     static_credentials
   end
