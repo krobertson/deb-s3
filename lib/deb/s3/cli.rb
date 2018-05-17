@@ -60,6 +60,10 @@ class Deb::S3::CLI < Thor
   :type     => :string,
   :desc     => "The (optional) session token for connecting to S3."
 
+  class_option :endpoint,
+  :type     => :string,
+  :desc     => "The URL endpoint to the S3 API."
+
   class_option :s3_region,
   :type     => :string,
   :desc     => "The region for connecting to S3.",
@@ -73,11 +77,6 @@ class Deb::S3::CLI < Thor
   class_option :proxy_uri,
   :type     => :string,
   :desc     => "The URI of the proxy to send service requests through."
-
-  #class_option :use_ssl,
-  #:default  => true,
-  #:type     => :boolean,
-  #:desc     => "Whether to use HTTP or HTTPS for request transport."
 
   class_option :visibility,
   :default  => "public",
@@ -590,6 +589,7 @@ class Deb::S3::CLI < Thor
       :http_proxy   => options[:proxy_uri],
       :force_path_style => options[:force_path_style]
     }
+    settings[:endpoint] = options[:endpoint] if options[:endpoint]
     settings.merge!(provider)
 
     Deb::S3::Utils.s3          = Aws::S3::Client.new(settings)
