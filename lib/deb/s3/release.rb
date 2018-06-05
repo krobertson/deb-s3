@@ -98,7 +98,7 @@ class Deb::S3::Release
     release_tmp.puts self.generate
     release_tmp.close
     yield self.filename if block_given?
-    s3_store(release_tmp.path, self.filename, 'text/plain; charset=UTF-8', self.cache_control)
+    s3_store(release_tmp.path, self.filename, 'text/plain; charset=utf-8', self.cache_control)
 
     # sign the file, if necessary
     if Deb::S3::Utils.signing_key
