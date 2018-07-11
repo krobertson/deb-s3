@@ -82,7 +82,7 @@ module Deb::S3::Utils
     # check if the object already exists
     if obj != false
       return if (file_md5.to_s == obj[:etag].gsub('"', '') or file_md5.to_s == obj[:metadata]['md5'])
-      raise AlreadyExistsError, "file #{obj.public_url} already exists with different contents" if fail_if_exists
+      raise AlreadyExistsError, "file #{filename} already exists with different contents" if fail_if_exists
     end
 
     options = {
