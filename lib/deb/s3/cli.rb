@@ -138,7 +138,8 @@ class Deb::S3::CLI < Thor
   :default  => false,
   :type     => :boolean,
   :desc     => "Whether to overwrite any existing package that has the same " +
-    "filename in the pool or the same name and version in the manifest."
+    "filename in the pool or the same name and version in the manifest but " +
+	"different contents."
 
   option :skip_package_upload,
   :default  => false,
