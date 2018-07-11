@@ -62,11 +62,11 @@ class Deb::S3::Manifest
       packages.each { |p|
         next unless p.name == pkg.name && \
                     p.full_version == pkg.full_version && \
-                    File.basename(p.url_filename) != \
-                    File.basename(pkg.url_filename)
+                    File.basename(p.url_filename(@codename)) != \
+                    File.basename(pkg.url_filename(@codename))
         raise AlreadyExistsError,
               "package #{pkg.name}_#{pkg.full_version} already exists " \
-              "with different filename (#{p.url_filename})"
+              "with different filename (#{p.url_filename(@codename)})"
       }
     end
     if preserve_versions
@@ -96,7 +96,7 @@ class Deb::S3::Manifest
   end
 
   def generate
-    @packages.collect { |pkg| pkg.generate }.join("\n")
+    @packages.collect { |pkg| pkg.generate(@codename) }.join("\n")
   end
 
   def write_to_s3
@@ -105,8 +105,8 @@ class Deb::S3::Manifest
     unless self.skip_package_upload
       # store any packages that need to be stored
       @packages_to_be_upload.each do |pkg|
-        yield pkg.url_filename if block_given?
-        s3_store(pkg.filename, pkg.url_filename, 'application/octet-stream; charset=binary', self.cache_control, self.fail_if_exists)
+        yield pkg.url_filename(@codename) if block_given?
+        s3_store(pkg.filename, pkg.url_filename(@codename), 'application/octet-stream; charset=binary', self.cache_control, self.fail_if_exists)
       end
     end
 
