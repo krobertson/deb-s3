@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    deb-s3 (0.9.3)
+    deb-s3 (0.10.0)
       aws-sdk (~> 2)
       thor (~> 0.19.0)
 
