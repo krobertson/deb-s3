@@ -106,7 +106,7 @@ class Deb::S3::Manifest
       # store any packages that need to be stored
       @packages_to_be_upload.each do |pkg|
         yield pkg.url_filename(@codename) if block_given?
-        s3_store(pkg.filename, pkg.url_filename(@codename), 'application/octet-stream; charset=binary', self.cache_control, self.fail_if_exists)
+        s3_store(pkg.filename, pkg.url_filename(@codename), 'application/x-debian-package', self.cache_control, self.fail_if_exists)
       end
     end
 
@@ -126,7 +126,7 @@ class Deb::S3::Manifest
     Zlib::GzipWriter.open(gztemp.path) { |gz| gz.write manifest }
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages.gz"
     yield f if block_given?
-    s3_store(gztemp.path, f, 'application/x-gzip; charset=binary', self.cache_control)
+    s3_store(gztemp.path, f, 'application/x-gzip', self.cache_control)
     @files["#{@component}/binary-#{@architecture}/Packages.gz"] = hashfile(gztemp.path)
     gztemp.unlink
 
