@@ -15,7 +15,6 @@ class Deb::S3::Lock
 
   class << self
     def locked?(codename, component = nil, architecture = nil, cache_control = nil)
-      puts lock_path(codename, component, architecture, cache_control)
       Deb::S3::Utils.s3_exists?(lock_path(codename, component, architecture, cache_control))
     end
 
