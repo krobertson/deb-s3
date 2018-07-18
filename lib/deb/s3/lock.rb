@@ -30,7 +30,8 @@ class Deb::S3::Lock
     def lock(codename, component = nil, architecture = nil, cache_control = nil)
       lockfile = Tempfile.new("lockfile")
 
-      lockfile_content = "#{Etc.getlogin}@#{Socket.gethostname}_#{SecureRandom.hex}"
+      # Write lock using a random number to ensure collisions dont occur from the same machine
+      lockfile_content = "#{Etc.getlogin}@#{Socket.gethostname}\n#{SecureRandom.hex}"
       lockfile.write lockfile_content
       lockfile.close
 
@@ -49,7 +50,7 @@ class Deb::S3::Lock
 
     def current(codename, component = nil, architecture = nil, cache_control = nil)
       lock_content = Deb::S3::Utils.s3_read(lock_path(codename, component, architecture, cache_control))
-      lock_content = lock_content.split('_').first.split('@')
+      lock_content = lock_content.split.first.split('@')
       lock = Deb::S3::Lock.new
       lock.user = lock_content[0]
       lock.host = lock_content[1] if lock_content.size > 1
