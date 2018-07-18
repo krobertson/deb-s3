@@ -2,6 +2,7 @@
 require "tempfile"
 require "socket"
 require "etc"
+require "securerandom"
 
 class Deb::S3::Lock
   attr_accessor :user
@@ -14,6 +15,7 @@ class Deb::S3::Lock
 
   class << self
     def locked?(codename, component = nil, architecture = nil, cache_control = nil)
+      puts lock_path(codename, component, architecture, cache_control)
       Deb::S3::Utils.s3_exists?(lock_path(codename, component, architecture, cache_control))
     end
 
@@ -28,13 +30,18 @@ class Deb::S3::Lock
 
     def lock(codename, component = nil, architecture = nil, cache_control = nil)
       lockfile = Tempfile.new("lockfile")
-      lockfile.write("#{Etc.getlogin}@#{Socket.gethostname}")
+
+      lockfile_content = "#{Etc.getlogin}@#{Socket.gethostname}_#{SecureRandom.hex}"
+      lockfile.write lockfile_content
       lockfile.close
 
       Deb::S3::Utils.s3_store(lockfile.path,
                               lock_path(codename, component, architecture, cache_control),
                               "text/plain",
                               cache_control)
+
+      return if lockfile_content == Deb::S3::Utils.s3_read(lock_path(codename, component, architecture, cache_control))
+      throw "Failed to acquire lock, was overwritten by another deb-s3 process"
     end
 
     def unlock(codename, component = nil, architecture = nil, cache_control = nil)
