@@ -50,7 +50,7 @@ class Deb::S3::Lock
 
     def current(codename, component = nil, architecture = nil, cache_control = nil)
       lock_content = Deb::S3::Utils.s3_read(lock_path(codename, component, architecture, cache_control))
-      lock_content = lock_content.split('@')
+      lock_content = lock_content.split('_').first.split('@')
       lock = Deb::S3::Lock.new
       lock.user = lock_content[0]
       lock.host = lock_content[1] if lock_content.size > 1
