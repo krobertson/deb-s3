@@ -31,8 +31,8 @@ class Deb::S3::Lock
       lockfile = Tempfile.new("lockfile")
 
       # Write lock using a random number to ensure collisions dont occur from the same machine
-      lockfile_content = "#{Etc.getlogin}@#{Socket.gethostname}\n#{SecureRandom.hex}"
-      lockfile.write lockfile_content
+      lock_content = generate_lock_content
+      lockfile.write lock_content
       lockfile.close
 
       Deb::S3::Utils.s3_store(lockfile.path,
@@ -40,7 +40,7 @@ class Deb::S3::Lock
                               "text/plain",
                               cache_control)
 
-      return if lockfile_content == Deb::S3::Utils.s3_read(lock_path(codename, component, architecture, cache_control))
+      return if lock_content == Deb::S3::Utils.s3_read(lock_path(codename, component, architecture, cache_control))
       throw "Failed to acquire lock, was overwritten by another deb-s3 process"
     end
 
@@ -60,6 +60,10 @@ class Deb::S3::Lock
     private
     def lock_path(codename, component = nil, architecture = nil, cache_control = nil)
       "dists/#{codename}/#{component}/binary-#{architecture}/lockfile"
+    end
+
+    def generate_lock_content
+      "#{Etc.getlogin}@#{Socket.gethostname}\n#{SecureRandom.hex}"
     end
   end
 end

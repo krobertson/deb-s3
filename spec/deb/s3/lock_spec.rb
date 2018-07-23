@@ -19,12 +19,26 @@ describe Deb::S3::Lock do
 
   describe :lock do
     it 'creates a lock file' do
-      mock = MiniTest::Mock.new
-      mock.expect(:call, nil, 4.times.map {Object})
-      Deb::S3::Utils.stub :s3_store, mock do
-        Deb::S3::Lock.lock("stable")
+      s3_store_mock = MiniTest::Mock.new
+      s3_store_mock.expect(:call, nil, 4.times.map {Object})
+
+      s3_read_mock = MiniTest::Mock.new
+      s3_read_mock.expect(:call, "foo@bar\nabcde", [String])
+
+      lock_content_mock = MiniTest::Mock.new
+      lock_content_mock.expect(:call, "foo@bar\nabcde")
+
+      Deb::S3::Utils.stub :s3_store, s3_store_mock do
+        Deb::S3::Utils.stub :s3_read, s3_read_mock do
+          Deb::S3::Lock.stub :generate_lock_content, lock_content_mock do
+            Deb::S3::Lock.lock("stable")
+          end
+        end
       end
-      mock.verify
+
+      s3_read_mock.verify
+      s3_store_mock.verify
+      lock_content_mock.verify
     end
   end
 
