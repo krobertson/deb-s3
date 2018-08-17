@@ -63,7 +63,7 @@ Usage:
 Options:
   -a, [--arch=ARCH]                                        # The architecture of the package in the APT repository.
   -p, [--preserve-versions], [--no-preserve-versions]      # Whether to preserve other versions of a package in the repository when uploading one.
-  -l, [--lock], [--no-lock]                                # Whether to check for an existing lock on the repository to prevent simultaneous updates
+  -l, [--lock], [--no-lock]                                # Whether to check for an existing lock on the repository to prevent simultaneous updates. Need to set "--s3-region" if it differs from the default.
       [--fail-if-exists], [--no-fail-if-exists]            # Whether to overwrite any existing package that has the same filename in the pool or the same name and version in the manifest but different contents.
       [--skip-package-upload], [--no-skip-package-upload]  # Whether to skip all package uploads.This is useful when hosting .deb files outside of the bucket.
   -b, [--bucket=BUCKET]                                    # The name of the S3 bucket to upload to.
