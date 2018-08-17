@@ -135,7 +135,7 @@ class Deb::S3::Package
     @url_filename || "pool/#{codename}/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
   end
 
-  def generate(codename)
+  def generate(codename = nil)
     template("package.erb").result(binding)
   end
 
