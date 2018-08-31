@@ -96,6 +96,11 @@ class Deb::S3::CLI < Thor
   :type    => :string,
   :desc    => "Additional command line options to pass to GPG when signing."
 
+  class_option :gpg_cmd,
+  :default => "",
+  :type    => :string,
+  :desc    => "Arbitrary gpg command to run for signing."
+
   class_option :encryption,
   :default  => false,
   :type     => :boolean,
@@ -597,6 +602,7 @@ class Deb::S3::CLI < Thor
     Deb::S3::Utils.bucket      = options[:bucket]
     Deb::S3::Utils.signing_key = options[:sign]
     Deb::S3::Utils.gpg_options = options[:gpg_options]
+    Deb::S3::Utils.gpg_cmd     = options[:gpg_cmd]
     Deb::S3::Utils.prefix      = options[:prefix]
     Deb::S3::Utils.encryption  = options[:encryption]
 
