@@ -1,5 +1,4 @@
-# -*- encoding : utf-8 -*-
-require File.expand_path('../../../spec_helper', __FILE__)
+require File.expand_path('../../spec_helper', __dir__)
 require 'deb/s3/lock'
 require 'minitest/mock'
 
@@ -7,12 +6,12 @@ describe Deb::S3::Lock do
   describe :locked? do
     it 'returns true if lock file exists' do
       Deb::S3::Utils.stub :s3_exists?, true do
-        Deb::S3::Lock.locked?("stable").must_equal true
+        Deb::S3::Lock.locked?('stable').must_equal true
       end
     end
     it 'returns true if lock file exists' do
       Deb::S3::Utils.stub :s3_exists?, false do
-        Deb::S3::Lock.locked?("stable").must_equal false
+        Deb::S3::Lock.locked?('stable').must_equal false
       end
     end
   end
@@ -20,7 +19,7 @@ describe Deb::S3::Lock do
   describe :lock do
     it 'creates a lock file' do
       s3_store_mock = MiniTest::Mock.new
-      s3_store_mock.expect(:call, nil, 4.times.map {Object})
+      s3_store_mock.expect(:call, nil, 4.times.map { Object })
 
       s3_read_mock = MiniTest::Mock.new
       s3_read_mock.expect(:call, "foo@bar\nabcde", [String])
@@ -31,7 +30,7 @@ describe Deb::S3::Lock do
       Deb::S3::Utils.stub :s3_store, s3_store_mock do
         Deb::S3::Utils.stub :s3_read, s3_read_mock do
           Deb::S3::Lock.stub :generate_lock_content, lock_content_mock do
-            Deb::S3::Lock.lock("stable")
+            Deb::S3::Lock.lock('stable')
           end
         end
       end
@@ -47,7 +46,7 @@ describe Deb::S3::Lock do
       mock = MiniTest::Mock.new
       mock.expect(:call, nil, [String])
       Deb::S3::Utils.stub :s3_remove, mock do
-        Deb::S3::Lock.unlock("stable")
+        Deb::S3::Lock.unlock('stable')
       end
       mock.verify
     end
@@ -56,9 +55,9 @@ describe Deb::S3::Lock do
   describe :current do
     before :each do
       mock = MiniTest::Mock.new
-      mock.expect(:call, "alex@localhost", [String])
+      mock.expect(:call, 'alex@localhost', [String])
       Deb::S3::Utils.stub :s3_read, mock do
-        @lock = Deb::S3::Lock.current("stable")
+        @lock = Deb::S3::Lock.current('stable')
       end
     end
 
@@ -74,5 +73,4 @@ describe Deb::S3::Lock do
       @lock.host.must_equal 'localhost'
     end
   end
-
 end

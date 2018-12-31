@@ -1,10 +1,9 @@
-# -*- encoding : utf-8 -*-
-require "digest/sha1"
-require "digest/sha2"
-require "digest/md5"
-require "socket"
-require "tmpdir"
-require "uri"
+require 'digest/sha1'
+require 'digest/sha2'
+require 'digest/md5'
+require 'socket'
+require 'tmpdir'
+require 'uri'
 
 require 'deb/s3/utils'
 
@@ -42,7 +41,7 @@ class Deb::S3::Package
     include Deb::S3::Utils
 
     def parse_file(package)
-      p = self.new
+      p = new
       p.extract_info(extract_control(package))
       p.apply_file_info(package)
       p.filename = package
@@ -50,13 +49,13 @@ class Deb::S3::Package
     end
 
     def parse_string(s)
-      p = self.new
+      p = new
       p.extract_info(s)
       p
     end
 
     def extract_control(package)
-      if system("which dpkg > /dev/null 2>&1")
+      if system('which dpkg > /dev/null 2>&1')
         `dpkg -f #{package}`
       else
         # ar fails to find the control.tar.gz tarball within the .deb
@@ -67,13 +66,13 @@ class Deb::S3::Package
         begin
           safesystem("ar t #{package} control.tar.gz &> /dev/null")
         rescue SafeSystemError
-          warn "Failed to find control data in .deb with ar, trying tar."
+          warn 'Failed to find control data in .deb with ar, trying tar.'
           extract_control_tarball_cmd = "tar zxf #{package} --to-stdout control.tar.gz"
         end
 
         Dir.mktmpdir do |path|
           safesystem("#{extract_control_tarball_cmd} | tar -zxf - -C #{path}")
-          File.read(File.join(path, "control"), :encoding => "UTF-8")
+          File.read(File.join(path, 'control'), encoding: 'UTF-8')
         end
       end
     end
@@ -86,27 +85,27 @@ class Deb::S3::Package
     # http://www.debian.org/doc/manuals/maint-guide/first.en.html
     # http://wiki.debian.org/DeveloperConfiguration
     # https://github.com/jordansissel/fpm/issues/37
-    if ENV.include?("DEBEMAIL") and ENV.include?("DEBFULLNAME")
+    if ENV.include?('DEBEMAIL') && ENV.include?('DEBFULLNAME')
       # Use DEBEMAIL and DEBFULLNAME as the default maintainer if available.
-      @maintainer = "#{ENV["DEBFULLNAME"]} <#{ENV["DEBEMAIL"]}>"
+      @maintainer = "#{ENV['DEBFULLNAME']} <#{ENV['DEBEMAIL']}>"
     else
       # TODO(sissel): Maybe support using 'git config' for a default as well?
       # git config --get user.name, etc can be useful.
       #
       # Otherwise default to user@currenthost
-      @maintainer = "<#{ENV["USER"]}@#{Socket.gethostname}>"
+      @maintainer = "<#{ENV['USER']}@#{Socket.gethostname}>"
     end
 
     @name = nil
-    @architecture = "native"
-    @description = "no description given"
+    @architecture = 'native'
+    @description = 'no description given'
     @version = nil
     @epoch = nil
     @iteration = nil
     @url = nil
-    @category = "default"
-    @license = "unknown"
-    @vendor = "none"
+    @category = 'default'
+    @license = 'unknown'
+    @vendor = 'none'
     @sha1 = nil
     @sha256 = nil
     @md5 = nil
@@ -119,7 +118,8 @@ class Deb::S3::Package
 
   def full_version
     return nil if [epoch, version, iteration].all?(&:nil?)
-    [[epoch, version].compact.join(":"), iteration].compact.join("-")
+
+    [[epoch, version].compact.join(':'), iteration].compact.join('-')
   end
 
   def filename=(f)
@@ -128,32 +128,33 @@ class Deb::S3::Package
   end
 
   def url_filename(codename)
-    @url_filename || "pool/#{codename}/#{self.name[0]}/#{self.name[0..1]}/#{File.basename(self.filename)}"
+    @url_filename || "pool/#{codename}/#{name[0]}/#{name[0..1]}/#{File.basename(filename)}"
   end
 
   def url_filename_encoded(codename)
-    @url_filename || "pool/#{codename}/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
+    @url_filename || "pool/#{codename}/#{name[0]}/#{name[0..1]}/#{s3_escape(File.basename(filename))}"
   end
 
   def generate(codename = nil)
-    template("package.erb").result(binding)
+    template('package.erb').result(binding)
   end
 
   # from fpm
   def parse_depends(data)
-    return [] if data.nil? or data.empty?
+    return [] if data.nil? || data.empty?
+
     # parse dependencies. Debian dependencies come in one of two forms:
     # * name
     # * name (op version)
     # They are all on one line, separated by ", "
 
     dep_re = /^([^ ]+)(?: \(([>=<]+) ([^)]+)\))?$/
-    return data.split(/, */).collect do |dep|
+    data.split(/, */).collect do |dep|
       m = dep_re.match(dep)
       if m
         name, op, version = m.captures
         # this is the proper form of dependency
-        if op && version && op != "" && version != ""
+        if op && version && op != '' && version != ''
           "#{name} (#{op} #{version})".strip
         else
           name.strip
@@ -174,7 +175,7 @@ class Deb::S3::Package
     else
       # Convert ones that appear to be 'name op version'
       name, op, version = dep.split(/ +/)
-      if !version.nil?
+      unless version.nil?
         # Convert strings 'foo >= bar' to 'foo (>= bar)'
         dep = "#{name} (#{debianize_op(op)} #{version})"
       end
@@ -182,35 +183,31 @@ class Deb::S3::Package
 
     name_re = /^[^ \(]+/
     name = dep[name_re]
-    if name =~ /[A-Z]/
-      dep = dep.gsub(name_re) { |n| n.downcase }
-    end
+    dep = dep.gsub(name_re, &:downcase) if name =~ /[A-Z]/
 
-    if dep.include?("_")
-      dep = dep.gsub("_", "-")
-    end
+    dep = dep.tr('_', '-') if dep.include?('_')
 
     # Convert gem ~> X.Y.Z to '>= X.Y.Z' and << X.Y+1.0
     if dep =~ /\(~>/
-      name, version = dep.gsub(/[()~>]/, "").split(/ +/)[0..1]
-      nextversion = version.split(".").collect { |v| v.to_i }
+      name, version = dep.gsub(/[()~>]/, '').split(/ +/)[0..1]
+      nextversion = version.split('.').collect(&:to_i)
       l = nextversion.length
-      nextversion[l-2] += 1
-      nextversion[l-1] = 0
-      nextversion = nextversion.join(".")
+      nextversion[l - 2] += 1
+      nextversion[l - 1] = 0
+      nextversion = nextversion.join('.')
       return ["#{name} (>= #{version})", "#{name} (<< #{nextversion})"]
     elsif (m = dep.match(/(\S+)\s+\(!= (.+)\)/))
       # Append this to conflicts
-      self.conflicts += [dep.gsub(/!=/,"=")]
+      self.conflicts += [dep.gsub(/!=/, '=')]
       return []
-    elsif (m = dep.match(/(\S+)\s+\(= (.+)\)/)) and
-        self.attributes[:deb_ignore_iteration_in_dependencies?]
+    elsif (m = dep.match(/(\S+)\s+\(= (.+)\)/)) &&
+          attributes[:deb_ignore_iteration_in_dependencies?]
       # Convert 'foo (= x)' to 'foo (>= x)' and 'foo (<< x+1)'
       # but only when flag --ignore-iteration-in-dependencies is passed.
       name, version = m[1..2]
-      nextversion = version.split('.').collect { |v| v.to_i }
+      nextversion = version.split('.').collect(&:to_i)
       nextversion[-1] += 1
-      nextversion = nextversion.join(".")
+      nextversion = nextversion.join('.')
       return ["#{name} (>= #{version})", "#{name} (<< #{nextversion})"]
     else
       # otherwise the dep is probably fine
@@ -227,18 +224,19 @@ class Deb::S3::Package
     if full_version !~ /^(?:([0-9]+):)?(.+?)(?:-(.*))?$/
       raise "Unsupported version string '#{full_version}'"
     end
-    self.epoch, self.version, self.iteration = $~.captures
+
+    self.epoch, self.version, self.iteration = $LAST_MATCH_INFO.captures
 
     self.architecture = fields.delete('Architecture')
     self.category = fields.delete('Section')
-    self.license = fields.delete('License') || self.license
+    self.license = fields.delete('License') || license
     self.maintainer = fields.delete('Maintainer')
     self.name = fields.delete('Package')
     self.url = fields.delete('Homepage')
-    self.vendor = fields.delete('Vendor') || self.vendor
-    self.attributes[:deb_priority] = fields.delete('Priority')
-    self.attributes[:deb_origin] = fields.delete('Origin')
-    self.attributes[:deb_installed_size] = fields.delete('Installed-Size')
+    self.vendor = fields.delete('Vendor') || vendor
+    attributes[:deb_priority] = fields.delete('Priority')
+    attributes[:deb_origin] = fields.delete('Origin')
+    attributes[:deb_installed_size] = fields.delete('Installed-Size')
 
     # Packages manifest fields
     filename = fields.delete('Filename')
@@ -249,23 +247,23 @@ class Deb::S3::Package
     self.size = fields.delete('Size')
     self.description = fields.delete('Description')
 
-    #self.config_files = config_files
+    # self.config_files = config_files
 
     self.dependencies += Array(parse_depends(fields.delete('Depends')))
 
-    self.attributes[:deb_recommends] = fields.delete('Recommends')
-    self.attributes[:deb_suggests]   = fields.delete('Suggests')
-    self.attributes[:deb_enhances]   = fields.delete('Enhances')
-    self.attributes[:deb_pre_depends] = fields.delete('Pre-Depends')
+    attributes[:deb_recommends] = fields.delete('Recommends')
+    attributes[:deb_suggests]   = fields.delete('Suggests')
+    attributes[:deb_enhances]   = fields.delete('Enhances')
+    attributes[:deb_pre_depends] = fields.delete('Pre-Depends')
 
-    self.attributes[:deb_breaks]    = fields.delete('Breaks')
-    self.attributes[:deb_conflicts] = fields.delete('Conflicts')
-    self.attributes[:deb_provides]  = fields.delete('Provides')
-    self.attributes[:deb_replaces]  = fields.delete('Replaces')
+    attributes[:deb_breaks]    = fields.delete('Breaks')
+    attributes[:deb_conflicts] = fields.delete('Conflicts')
+    attributes[:deb_provides]  = fields.delete('Provides')
+    attributes[:deb_replaces]  = fields.delete('Replaces')
 
-    self.attributes[:deb_field] = Hash[fields.map { |k, v|
+    attributes[:deb_field] = Hash[fields.map do |k, v|
       [k.sub(/\AX[BCS]{0,3}-/, ''), v]
-    }]
+    end]
   end # def extract_info
 
   def apply_file_info(file)
@@ -277,22 +275,24 @@ class Deb::S3::Package
 
   def parse_control(control)
     field = nil
-    value = ""
+    value = ''
     {}.tap do |fields|
       control.each_line do |line|
         if line =~ /^(\s+)(\S.*)$/
-          indent, rest = $1, $2
+          indent = Regexp.last_match(1)
+          rest = Regexp.last_match(2)
           # Continuation
-          if indent.size == 1 && rest == "."
+          if indent.size == 1 && rest == '.'
             value << "\n"
-            rest = ""
-          elsif value.size > 0
+            rest = ''
+          elsif !value.empty?
             value << "\n"
           end
           value << rest
         elsif line =~ /^([-\w]+):(.*)$/
           fields[field] = value if field
-          field, value = $1, $2.strip
+          field = Regexp.last_match(1)
+          value = Regexp.last_match(2).strip
         end
       end
       fields[field] = value if field

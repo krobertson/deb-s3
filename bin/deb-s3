@@ -1,10 +1,9 @@
 #!/usr/bin/env ruby
 
 require 'pathname'
-$:.unshift File.join(Pathname.new(__FILE__).realpath,'../../lib')
+$LOAD_PATH.unshift File.join(Pathname.new(__FILE__).realpath, '../../lib')
 
 require 'rubygems'
 require 'deb/s3/cli'
 
 Deb::S3::CLI.start
-

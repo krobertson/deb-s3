@@ -1,6 +1,5 @@
-# -*- encoding : utf-8 -*-
-require "tempfile"
-require "zlib"
+require 'tempfile'
+require 'zlib'
 require 'deb/s3/utils'
 require 'deb/s3/package'
 
@@ -25,17 +24,17 @@ class Deb::S3::Manifest
     @component = nil
     @architecture = nil
     @files = {}
-    @cache_control = ""
+    @cache_control = ''
     @fail_if_exists = false
     @skip_package_upload = false
   end
 
   class << self
-    def retrieve(codename, component, architecture, cache_control, fail_if_exists, skip_package_upload=false)
+    def retrieve(codename, component, architecture, cache_control, fail_if_exists, skip_package_upload = false)
       m = if s = Deb::S3::Utils.s3_read("dists/#{codename}/#{component}/binary-#{architecture}/Packages")
-        self.parse_packages(s)
-      else
-        self.new
+            parse_packages(s)
+          else
+            new
       end
 
       m.codename = codename
@@ -48,26 +47,28 @@ class Deb::S3::Manifest
     end
 
     def parse_packages(str)
-      m = self.new
+      m = new
       str.split("\n\n").each do |s|
         next if s.chomp.empty?
+
         m.packages << Deb::S3::Package.parse_string(s)
       end
       m
     end
   end
 
-  def add(pkg, preserve_versions, needs_uploading=true)
-    if self.fail_if_exists
-      packages.each { |p|
+  def add(pkg, preserve_versions, needs_uploading = true)
+    if fail_if_exists
+      packages.each do |p|
         next unless p.name == pkg.name && \
                     p.full_version == pkg.full_version && \
                     File.basename(p.url_filename(@codename)) != \
                     File.basename(pkg.url_filename(@codename))
+
         raise AlreadyExistsError,
               "package #{pkg.name}_#{pkg.full_version} already exists " \
               "with different filename (#{p.url_filename(@codename)})"
-      }
+      end
     end
     if preserve_versions
       packages.delete_if { |p| p.name == pkg.name && p.full_version == pkg.full_version }
@@ -79,17 +80,17 @@ class Deb::S3::Manifest
     pkg
   end
 
-  def delete_package(pkg, versions=nil)
+  def delete_package(pkg, versions = nil)
     deleted = []
-    new_packages = @packages.select { |p|
-        # Include packages we didn't name
-        if p.name != pkg
-           p
-        # Also include the packages not matching a specified version
-        elsif (!versions.nil? and p.name == pkg and !versions.include?(p.version) and !versions.include?("#{p.version}-#{p.iteration}") and !versions.include?(p.full_version))
-            p
-        end
-    }
+    new_packages = @packages.select do |p|
+      # Include packages we didn't name
+      if p.name != pkg
+        p
+      # Also include the packages not matching a specified version
+      elsif !versions.nil? && (p.name == pkg) && !versions.include?(p.version) && !versions.include?("#{p.version}-#{p.iteration}") && !versions.include?(p.full_version)
+        p
+      end
+    end
     deleted = @packages - new_packages
     @packages = new_packages
     deleted
@@ -100,33 +101,33 @@ class Deb::S3::Manifest
   end
 
   def write_to_s3
-    manifest = self.generate
+    manifest = generate
 
-    unless self.skip_package_upload
+    unless skip_package_upload
       # store any packages that need to be stored
       @packages_to_be_upload.each do |pkg|
         yield pkg.url_filename(@codename) if block_given?
-        s3_store(pkg.filename, pkg.url_filename(@codename), 'application/x-debian-package', self.cache_control, self.fail_if_exists)
+        s3_store(pkg.filename, pkg.url_filename(@codename), 'application/x-debian-package', cache_control, fail_if_exists)
       end
     end
 
     # generate the Packages file
-    pkgs_temp = Tempfile.new("Packages")
+    pkgs_temp = Tempfile.new('Packages')
     pkgs_temp.write manifest
     pkgs_temp.close
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages"
     yield f if block_given?
-    s3_store(pkgs_temp.path, f, 'text/plain; charset=utf-8', self.cache_control)
+    s3_store(pkgs_temp.path, f, 'text/plain; charset=utf-8', cache_control)
     @files["#{@component}/binary-#{@architecture}/Packages"] = hashfile(pkgs_temp.path)
     pkgs_temp.unlink
 
     # generate the Packages.gz file
-    gztemp = Tempfile.new("Packages.gz")
+    gztemp = Tempfile.new('Packages.gz')
     gztemp.close
     Zlib::GzipWriter.open(gztemp.path) { |gz| gz.write manifest }
     f = "dists/#{@codename}/#{@component}/binary-#{@architecture}/Packages.gz"
     yield f if block_given?
-    s3_store(gztemp.path, f, 'application/x-gzip', self.cache_control)
+    s3_store(gztemp.path, f, 'application/x-gzip', cache_control)
     @files["#{@component}/binary-#{@architecture}/Packages.gz"] = hashfile(gztemp.path)
     gztemp.unlink
 
@@ -135,10 +136,10 @@ class Deb::S3::Manifest
 
   def hashfile(path)
     {
-      :size   => File.size(path),
-      :sha1   => Digest::SHA1.file(path).hexdigest,
-      :sha256 => Digest::SHA2.file(path).hexdigest,
-      :md5    => Digest::MD5.file(path).hexdigest
+      size: File.size(path),
+      sha1: Digest::SHA1.file(path).hexdigest,
+      sha256: Digest::SHA2.file(path).hexdigest,
+      md5: Digest::MD5.file(path).hexdigest
     }
   end
 end
