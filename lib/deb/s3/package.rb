@@ -73,7 +73,7 @@ class Deb::S3::Package
 
         Dir.mktmpdir do |path|
           safesystem("#{extract_control_tarball_cmd} | tar -zxf - -C #{path}")
-          File.read(File.join(path, "control"))
+          File.read(File.join(path, "control"), :encoding => "UTF-8")
         end
       end
     end
@@ -135,7 +135,7 @@ class Deb::S3::Package
     @url_filename || "pool/#{codename}/#{self.name[0]}/#{self.name[0..1]}/#{s3_escape(File.basename(self.filename))}"
   end
 
-  def generate(codename)
+  def generate(codename = nil)
     template("package.erb").result(binding)
   end
 
