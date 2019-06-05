@@ -16,6 +16,8 @@ module Deb::S3::Utils
   def signing_key= v; @signing_key = v end
   def gpg_options; @gpg_options end
   def gpg_options= v; @gpg_options = v end
+  def gpg_cmd; @gpg_cmd end
+  def gpg_cmd= v; @gpg_cmd = v end
   def prefix; @prefix end
   def prefix= v; @prefix = v end
   def encryption; @encryption end
