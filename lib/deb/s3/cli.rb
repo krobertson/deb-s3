@@ -205,11 +205,15 @@ class Deb::S3::CLI < Thor
         # throw an error. This is mainly the case when initializing a brand new
         # repository. With "all", we won't know which architectures they're using.
         if arch == "all" && manifests.count == 0
-          error("Package #{File.basename(file)} had architecture \"all\", " +
-                "however noexisting package lists exist. This can often happen " +
-                "if the first package you are add to a new repository is an " +
-                "\"all\" architecture file. Please use --arch [i386|amd64|armhf] or " +
-                "another platform type to upload the file.")
+          manifests['amd64'] = Deb::S3::Manifest.retrieve(options[:codename], component,'amd64', options[:cache_control], options[:fail_if_exists], options[:skip_package_upload])
+          manifests['i386'] = Deb::S3::Manifest.retrieve(options[:codename], component,'i386', options[:cache_control], options[:fail_if_exists], options[:skip_package_upload])
+          manifests['armhf'] = Deb::S3::Manifest.retrieve(options[:codename], component,'armhf', options[:cache_control], options[:fail_if_exists], options[:skip_package_upload])
+
+         # error("Package #{File.basename(file)} had architecture \"all\", " +
+         #       "however noexisting package lists exist. This can often happen " +
+         #       "if the first package you are add to a new repository is an " +
+         #       "\"all\" architecture file. Please use --arch [i386|amd64|armhf] or " +
+         #       "another platform type to upload the file.")
         end
 
         # retrieve the manifest for the arch if we don't have it already
