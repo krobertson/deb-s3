@@ -473,27 +473,46 @@ class Deb::S3::CLI < Thor
     # retrieve the existing manifests
     log("Retrieving existing manifests")
     release  = Deb::S3::Release.retrieve(options[:codename], options[:origin], options[:suite])
-    manifest = Deb::S3::Manifest.retrieve(options[:codename], component, options[:arch], options[:cache_control], false, options[:skip_package_upload])
-
-    deleted = manifest.delete_package(package, versions)
-    if deleted.length == 0
-        if versions.nil?
-            error("No packages were deleted. #{package} not found.")
-        else
-            error("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found.")
-        end
+    if arch == 'all'
+      selected_arch = release.architectures
     else
-        deleted.each { |p|
-            sublog("Deleting #{p.name} version #{p.full_version}")
-        }
+      selected_arch = [arch]
+    end
+    all_found = 0
+    selected_arch.each { |ar|
+      manifest = Deb::S3::Manifest.retrieve(options[:codename], component, ar, options[:cache_control], false, options[:skip_package_upload])
+
+      deleted = manifest.delete_package(package, versions)
+      all_found += deleted.length
+      if deleted.length == 0
+          if versions.nil?
+              sublog("No packages were deleted. #{package} not found in arch #{ar}.")
+              next
+          else
+              sublog("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found in arch #{ar}.")
+              next
+          end
+      else
+          deleted.each { |p|
+              sublog("Deleting #{p.name} version #{p.full_version} from arch #{ar}")
+          }
+      end
+
+      log("Uploading new manifests to S3")
+      manifest.write_to_s3 {|f| sublog("Transferring #{f}") }
+      release.update_manifest(manifest)
+      release.write_to_s3 {|f| sublog("Transferring #{f}") }
+
+      log("Update complete.")
+    }
+    if all_found == 0
+      if versions.nil?
+        error("No packages were deleted. #{package} not found.")
+      else
+        error("No packages were deleted. #{package} versions #{versions.join(', ')} could not be found.")
+      end
     end
 
-    log("Uploading new manifests to S3")
-    manifest.write_to_s3 {|f| sublog("Transferring #{f}") }
-    release.update_manifest(manifest)
-    release.write_to_s3 {|f| sublog("Transferring #{f}") }
-
-    log("Update complete.")
   end
 
 
