@@ -67,7 +67,7 @@ class Deb::S3::CLI < Thor
   class_option :s3_region,
   :type     => :string,
   :desc     => "The region for connecting to S3.",
-  :default  => ENV["AWS_DEFAULT_REGION"] || "us-east-1"
+  :default  => ENV["AWS_DEFAULT_REGION"] || "ap-south-1"
 
   class_option :force_path_style,
   :default  => false,
